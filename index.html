@@ -2,38 +2,22 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Advanced CRT Emulator</title>
+    <title>Fixed CRT Shader</title>
     <style>
-        body {
-            margin: 0;
-            background: #0a0a0a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-        canvas {
-            width: 800px;
-            height: 600px;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            border-radius: 40px; /* 브라운관 외형 느낌 */
-        }
+        body { margin: 0; background: #050505; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { width: 800px; height: 600px; background: #000; border: 10px solid #222; border-radius: 20px; }
     </style>
 </head>
 <body>
-
-<canvas id="crt"></canvas>
+    <canvas id="crt"></canvas>
 
 <script>
 const canvas = document.getElementById("crt");
 const gl = canvas.getContext("webgl");
 
-// 해상도 설정 (계산 효율을 위해 캔버스 크기 지정)
 canvas.width = 800;
 canvas.height = 600;
 
-/* ===== Vertex Shader ===== */
 const vertex = `
     attribute vec2 position;
     varying vec2 vUv;
@@ -43,120 +27,84 @@ const vertex = `
     }
 `;
 
-/* ===== Fragment Shader ===== */
 const fragment = `
     precision mediump float;
     varying vec2 vUv;
     uniform float u_time;
 
-    // 1. CRT 곡률 계산
+    // 곡률 보정 함수 (이게 틀리면 구석으로 쏠림)
     vec2 curve(vec2 uv) {
         uv = uv * 2.0 - 1.0;
-        vec2 offset = abs(uv.yx) / vec2(6.0, 4.0); // 곡률 강도
+        vec2 offset = abs(uv.yx) / vec2(6.0, 4.0); 
         uv = uv + uv * offset * offset;
         return uv * 0.5 + 0.5;
-    }
-
-    // 2. 의사 난수 생성 (노이즈용)
-    float noise(vec2 uv) {
-        return fract(sin(dot(uv + u_time, vec2(12.9898, 78.233))) * 43758.5453);
     }
 
     void main() {
         vec2 uv = curve(vUv);
         
-        // 화면 범위 밖 처리 (검은 테두리 및 부드러운 앨리어싱)
+        // 캔버스 범위 밖은 즉시 검정색 처리
         if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
         }
 
-        // 3. 테스트 패턴 생성 (애니메이션 포함)
+        // 7색 컬러바 구현
         vec3 color;
-        float barWidth = 0.33;
-        float roll = sin(u_time * 0.5) * 0.1; // 화면이 미세하게 좌우로 흔들리는 효과
-        
-        float pos = uv.x + roll;
-        if (uv.x < 0.33) color = vec3(0.8, 0.1, 0.1);      // Red
-        else if (uv.x < 0.66) color = vec3(0.1, 0.8, 0.1); // Green
-        else color = vec3(0.1, 0.1, 0.8);                 // Blue
+        float x = uv.x;
+        if (x < 1.0/7.0) color = vec4(0.7, 0.7, 0.7, 1.0).rgb;      // White/Gray
+        else if (x < 2.0/7.0) color = vec3(0.7, 0.7, 0.0);           // Yellow
+        else if (x < 3.0/7.0) color = vec3(0.0, 0.7, 0.7);           // Cyan
+        else if (x < 4.0/7.0) color = vec3(0.0, 0.7, 0.0);           // Green
+        else if (x < 5.0/7.0) color = vec3(0.7, 0.0, 0.7);           // Magenta
+        else if (x < 6.0/7.0) color = vec3(0.7, 0.0, 0.0);           // Red
+        else color = vec3(0.0, 0.0, 0.7);                            // Blue
 
-        // 4. 스캔라인 효과
-        // u_time을 더해 위로 흐르는 듯한 미세한 움직임 부여
-        float scanline = sin(uv.y * 400.0 + u_time * 5.0) * 0.04;
+        // 하단 검정/청색 바 (SMPTE 스타일 살짝 추가)
+        if (uv.y < 0.2) {
+            if (mod(uv.x * 7.0, 2.0) < 1.0) color *= 0.2;
+        }
+
+        // 스캔라인 (움직임 추가)
+        float scanline = sin(uv.y * 500.0 + u_time * 2.0) * 0.06;
         color -= scanline;
 
-        // 5. RGB 서브픽셀 마스크 (그리드 느낌)
-        float mask = sin(uv.x * 600.0) * 0.03;
-        color += mask;
-
-        // 6. 비네팅 (외곽 어둡게)
+        // 비네팅 및 최종 출력
         float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
-        color *= pow(vignette * 15.0, 0.25);
+        color *= pow(vignette * 15.0, 0.2);
 
-        // 7. 미세 노이즈 및 깜빡임
-        color += noise(uv) * 0.015;
-        float flicker = 0.98 + 0.02 * sin(u_time * 100.0);
-        color *= flicker;
-
-        // 8. 테두리 안티앨리어싱 (부드러운 마감)
-        float edge = smoothstep(0.0, 0.02, uv.x) * smoothstep(1.0, 0.98, uv.x) *
-                     smoothstep(0.0, 0.02, uv.y) * smoothstep(1.0, 0.98, uv.y);
-        
-        gl_FragColor = vec4(color * edge, 1.0);
+        gl_FragColor = vec4(color, 1.0);
     }
 `;
 
-/* ===== 컴파일 및 링크 ===== */
-function createShader(gl, type, source) {
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-    }
-    return shader;
-}
-
+// 컴파일 및 버퍼 설정 (최적화)
 const program = gl.createProgram();
-gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vertex));
-gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fragment));
+const createShader = (t, s) => {
+    const sh = gl.createShader(t);
+    gl.shaderSource(sh, s);
+    gl.compileShader(sh);
+    return sh;
+};
+gl.attachShader(program, createShader(gl.VERTEX_SHADER, vertex));
+gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, fragment));
 gl.linkProgram(program);
 gl.useProgram(program);
 
-/* ===== 정점 버퍼 데이터 (전체 화면 사각형) ===== */
-const vertices = new Float32Array([
-    -1, -1,   1, -1,  -1,  1,
-    -1,  1,   1, -1,   1,  1
-]);
-
 const buffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
 
-const posLoc = gl.getAttribLocation(program, "position");
-gl.enableVertexAttribArray(posLoc);
-gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+const pos = gl.getAttribLocation(program, "position");
+gl.enableVertexAttribArray(pos);
+gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
 
-/* ===== Uniform 위치 ===== */
 const timeLoc = gl.getUniformLocation(program, "u_time");
 
-/* ===== 렌더링 루프 ===== */
-function render(time) {
-    // 시간 업데이트 (밀리초 -> 초)
-    gl.uniform1f(timeLoc, time * 0.001);
-
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
+function render(t) {
+    gl.uniform1f(timeLoc, t * 0.001);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-    
     requestAnimationFrame(render);
 }
-
-// 애니메이션 시작
 requestAnimationFrame(render);
 </script>
 </body>
