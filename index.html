@@ -2,128 +2,94 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Skeletal Fairy on Mars TV</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skeletal Fairy TV - Large & Clean</title>
     <style>
-        body {
-            background-color: #111; /* 전체 어두운 배경 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        /* 기본 스타일 초기화 */
+        body, html {
             margin: 0;
-            overflow: hidden;
-            font-family: sans-serif;
-        }
-
-        /* 텔레비전 케이스 프레임 */
-        .tv-bezel {
-            width: 90vmin; /* 화면 크기에 맞게 조절 */
-            max-width: 600px;
-            aspect-ratio: 4 / 3;
-            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); /* 금속/플라스틱 느낌 */
-            border-radius: 10% / 15%; /* 곡면 베젤 */
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.7);
-            padding: 30px; /* 내부 화면 간격 */
-            position: relative;
-            box-sizing: border-box;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: #000; /* 전체 배경은 완전 검은색 */
+            overflow: hidden; /* 스크롤 방지 */
         }
 
-        /* 텔레비전 화면 내부 */
+        /* 1. TV 베젤 (전체 화면 크기 조절) */
+        .tv-bezel {
+            /* 화면에 꽉 차도록 설정 (여백 2%만 남김) */
+            width: 96vw; 
+            height: 96vh;
+            
+            /* 원본처럼 검은색 베젤 */
+            background-color: #000; 
+            
+            /* 모서리를 원본처럼 '아주 살짝만' 둥글게 (0.5%) */
+            border-radius: 0.5vw; 
+            
+            /* 부드러운 그림자로 베젤 입체감 표현 */
+            box-shadow: inset 0 0 10px rgba(255,255,255,0.1); 
+            
+            /* 내부 화면과의 간격 (베젤 두께) */
+            padding: 1vw; 
+            box-sizing: border-box;
+            
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* 2. TV 화면 (이미지가 표시되는 영역) */
         .tv-screen {
             width: 100%;
             height: 100%;
             background-color: #000;
-            border-radius: 8% / 12%; /* 더 둥근 화면 곡면 */
-            overflow: hidden;
+            
+            /* 화면 모서리도 베젤과 맞춰 아주 조금만 둥글게 */
+            border-radius: 0.3vw; 
+            
+            overflow: hidden; /* 이미지가 모서리를 넘지 않게 */
             position: relative;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.9); /* 화면 깊이감 */
+            
+            /* 내부 그림자로 화면이 안으로 들어간 느낌 표현 */
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8); 
         }
 
-        /* 화면 곡면 효과 (어안 렌즈) */
-        .tv-screen::before {
-            content: "";
-            position: absolute;
-            top: -10%;
-            left: -10%;
-            width: 120%;
-            height: 120%;
-            background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 80%, #000 100%);
-            z-index: 10;
-            pointer-events: none; /* 클릭 방지 */
-        }
-
-        /* 배경 이미지 및 효과 */
+        /* 3. 실제 이미지 콘텐츠 (지글거림 없음) */
         .tv-content {
             width: 100%;
             height: 100%;
-            background-image: url('skeleton_fairy.png'); /* 이미지 경로 수정 */
-            background-size: 100% 100%; /* 화면에 맞게 늘림 */
-            filter: blur(1.5px) contrast(1.1) brightness(0.9); /* 흐릿하고 거친 화질 재현 */
+            
+            /* 이미지 설정 */
+            background-image: url('image_0be285.jpg'); /* 원본 이미지 파일명 */
+            background-size: contain; /* 이미지가 잘리지 않고 전체가 다 보이도록 */
+            background-position: center; /* 중앙 정렬 */
+            background-repeat: no-repeat; /* 반복 없음 */
+            
+            /* 이전 버전의 흐림/노이즈 필터 제거 (선명하게) */
+            filter: none; 
+            
             position: absolute;
             top: 0;
             left: 0;
-            z-index: 1;
-            transform: scale(1.15); /* 어안 왜곡으로 인해 작아진 부분을 보정 */
-            transform-origin: center;
         }
 
-        /* 화면 스캔라인 효과 */
-        .scanlines {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(
-                to bottom,
-                transparent 0%,
-                rgba(0,0,0,0.05) 1.5%,
-                transparent 3%
-            );
-            z-index: 5;
-            pointer-events: none;
-        }
-
-        /* 화면 노이즈/노이즈 오버레이 */
-        .static {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkYGDgA8L///8zMDD4wH//AAAFCQX8z5X4ZzAAAAABJRU5ErkJggg=='); /* 아주 작고 투명한 노이즈 패턴 */
-            opacity: 0.1;
-            z-index: 4;
-            pointer-events: none;
-            animation: staticNoise 0.5s infinite;
-        }
-
-        @keyframes staticNoise {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(2px, 2px); }
-        }
-
-        /* 이미지 요소에 대한 시각적 세부 사항 주석 (코드 구현 아님)
-           주석: 해골은 핑크색 날개와 파란색/흰색 투투를 착용.
-           주석: 해골은 왼손에 별 모양 지팡이를 들고 있음.
-           주석: 배경은 화성의 표면과 유사한 황갈색 모래와 바위.
-           주석: 오른쪽 다리는 움직임을 표현하기 위해 흐릿함.
-        */
-        
     </style>
 </head>
 <body>
 
-<div class="tv-bezel">
-    <div class="tv-screen">
-        <div class="tv-content"></div>
-        <div class="scanlines"></div>
-        <div class="static"></div>
+    <!-- TV 베젤 (외부 프레임) -->
+    <div class="tv-bezel">
+        <!-- TV 화면 (이미지 영역) -->
+        <div class="tv-screen">
+            <!-- 선명한 이미지 콘텐츠 -->
+            <div class="tv-content"></div>
+        </div>
     </div>
-</div>
 
 </body>
 </html>
