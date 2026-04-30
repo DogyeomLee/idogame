@@ -2,235 +2,140 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Game Stat Screen</title>
+    <title>Perfect Retro Stat Screen</title>
     <style>
         * { margin: 0; padding: 0; overflow: hidden; }
-        body, html { 
-            width: 100%; height: 100%; 
-            background-color: #050505; 
+        body {
+            background-color: #0a0a0a;
             display: flex; justify-content: center; align-items: center;
+            height: 100vh; width: 100vw;
+            perspective: 1000px; /* 3D 효과를 위한 설정 */
         }
-        #container {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+
+        /* 1. 볼록한 렌즈 효과를 주는 실제 유리관 컨테이너 */
+        #monitor-glass {
+            position: relative;
+            width: 90vw;
+            height: 67.5vw; /* 4:3 비율 */
+            max-width: 1000px;
+            max-height: 750px;
+            background: #000;
+            border-radius: 50% / 10%; /* 볼록한 곡면 느낌 */
+            overflow: hidden;
+            box-shadow: 
+                0 0 100px rgba(0,0,0,1),
+                inset 0 0 100px rgba(0,255,255,0.1);
+            transform: rotateX(2deg) scale(1.05); /* 약간 앞으로 튀어나온 느낌 */
+            border: 2px solid #333;
         }
-        canvas { 
-            /* 화면에 꽉 차게 조절 (비율 유지) */
-            max-width: 95%;
-            max-height: 95%;
-            aspect-ratio: 4 / 3;
-            cursor: pointer;
+
+        /* 2. CRT 주사선 및 정전기 효과 (레이어) */
+        #scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 10;
         }
+
+        /* 3. 화면 번쩍임 및 비네팅 */
+        #vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%);
+            pointer-events: none;
+            z-index: 11;
+        }
+
+        canvas { width: 100%; height: 100%; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div id="container">
-        <canvas id="crt"></canvas>
+
+    <div id="monitor-glass">
+        <canvas id="gameCanvas"></canvas>
+        <div id="scanlines"></div>
+        <div id="vignette"></div>
     </div>
 
 <script>
-const canvas = document.getElementById("crt");
-const gl = canvas.getContext("webgl");
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-const textCanvas = document.createElement("canvas");
-const tCtx = textCanvas.getContext("2d");
-textCanvas.width = 1024;
-textCanvas.height = 768;
+// 해상도 설정
+canvas.width = 1000;
+canvas.height = 750;
 
 let page = 0;
-const pages = [
-    { 
-        title: "CHARACTER STATUS", 
-        name: "GEMINI", 
-        lv: "99",
-        hp: [850, 1000],
-        mp: [420, 500],
-        stats: [["STR", 85], ["INT", 99], ["AGI", 72], ["LUK", 60]] 
+const data = [
+    {
+        title: "CHARACTER STATUS",
+        name: "GEMINI", lv: "99",
+        hp: 850, mp: 420,
+        stats: [["STR", 85], ["INT", 99], ["AGI", 72], ["LUK", 60]]
     },
-    { 
-        title: "EQUIPMENT SKILLS", 
-        name: "GEMINI", 
-        lv: "99",
-        hp: [850, 1000],
-        mp: [420, 500],
-        stats: [["REACT", 90], ["WEBGL", 85], ["CANVAS", 95], ["UI/UX", 80]] 
+    {
+        title: "SKILL INVENTORY",
+        name: "GEMINI", lv: "99",
+        hp: 850, mp: 420,
+        stats: [["REACT", 90], ["WEBGL", 85], ["CANVAS", 95], ["UI/UX", 80]]
     }
 ];
 
-function drawUI() {
-    const d = pages[page];
+function draw() {
+    const d = data[page];
     
-    // 1. 배경: 고전 게임 특유의 짙은 블루 그라데이션 느낌
-    const grad = tCtx.createLinearGradient(0, 0, 0, 768);
-    grad.addColorStop(0, "#000044");
-    grad.addColorStop(1, "#000022");
-    tCtx.fillStyle = grad;
-    tCtx.fillRect(0, 0, 1024, 768);
-    
-    // 2. 장식용 격자 무늬 (Grid)
-    tCtx.strokeStyle = "rgba(0, 255, 255, 0.05)";
-    tCtx.lineWidth = 1;
-    for(let i=0; i<1024; i+=40) { tCtx.beginPath(); tCtx.moveTo(i,0); tCtx.lineTo(i,768); tCtx.stroke(); }
-    for(let i=0; i<768; i+=40) { tCtx.beginPath(); tCtx.moveTo(0,i); tCtx.lineTo(1024,i); tCtx.stroke(); }
+    // 배경색
+    ctx.fillStyle = "#000033";
+    ctx.fillRect(0, 0, 1000, 750);
 
-    // 3. 고전 게임 테두리 (Double Frame)
-    tCtx.strokeStyle = "#860"; tCtx.lineWidth = 15;
-    tCtx.strokeRect(30, 30, 964, 708);
-    tCtx.strokeStyle = "#fb0"; tCtx.lineWidth = 3;
-    tCtx.strokeRect(45, 45, 934, 678);
+    // 삼국지 스타일 황금 테두리
+    ctx.strokeStyle = "#860"; ctx.lineWidth = 15;
+    ctx.strokeRect(30, 30, 940, 690);
+    ctx.strokeStyle = "#fb0"; ctx.lineWidth = 2;
+    ctx.strokeRect(45, 45, 910, 660);
 
-    // 4. 타이틀 영역
-    tCtx.fillStyle = "rgba(136, 102, 0, 0.8)";
-    tCtx.fillRect(45, 45, 934, 70);
-    tCtx.fillStyle = "#fff";
-    tCtx.font = "bold 40px monospace";
-    tCtx.textAlign = "center";
-    tCtx.fillText(d.title, 512, 95);
+    // 타이틀
+    ctx.fillStyle = "#860"; ctx.fillRect(45, 45, 910, 70);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 40px monospace"; ctx.textAlign = "center";
+    ctx.fillText(d.title, 500, 95);
 
-    // 5. 캐릭터 기본 정보
-    tCtx.textAlign = "left";
-    tCtx.font = "bold 35px monospace";
-    tCtx.fillStyle = "#0ff";
-    tCtx.fillText(`NAME: ${d.name}`, 100, 200);
-    tCtx.fillStyle = "#ff0";
-    tCtx.fillText(`LV  : ${d.lv}`, 100, 250);
+    // 캐릭터 정보
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#0ff"; ctx.fillText(`NAME: ${d.name}`, 100, 200);
+    ctx.fillStyle = "#ff0"; ctx.fillText(`LV  : ${d.lv}`, 100, 260);
 
-    // HP/MP 바
-    const drawBar = (label, curr, max, y, color) => {
-        tCtx.fillStyle = "#fff";
-        tCtx.font = "bold 25px monospace";
-        tCtx.fillText(label, 100, y);
-        tCtx.fillStyle = "#111";
-        tCtx.fillRect(200, y - 20, 400, 25);
-        tCtx.fillStyle = color;
-        tCtx.fillRect(200, y - 20, (curr/max) * 400, 25);
-        tCtx.fillStyle = "#fff";
-        tCtx.fillText(`${curr}/${max}`, 620, y);
-    }
-    drawBar("HP", d.hp[0], d.hp[1], 320, "#f00");
-    drawBar("MP", d.mp[0], d.mp[1], 370, "#0af");
+    // 게이지바
+    const bar = (label, val, max, y, color) => {
+        ctx.fillStyle = "#fff"; ctx.font = "25px monospace";
+        ctx.fillText(label, 100, y);
+        ctx.fillStyle = "#111"; ctx.fillRect(200, y-20, 400, 25);
+        ctx.fillStyle = color; ctx.fillRect(200, y-20, (val/max)*400, 25);
+    };
+    bar("HP", d.hp, 1000, 330, "#f33");
+    bar("MP", d.mp, 500, 380, "#3af");
 
-    // 6. 상세 스탯 창
-    tCtx.strokeStyle = "#fb0";
-    tCtx.strokeRect(100, 430, 824, 250);
+    // 스탯 박스
+    ctx.strokeStyle = "#fb0"; ctx.strokeRect(100, 440, 800, 220);
     d.stats.forEach((s, i) => {
-        let x = i % 2 === 0 ? 150 : 550;
-        let y = 490 + (Math.floor(i/2) * 80);
-        tCtx.fillStyle = "#fff";
-        tCtx.font = "bold 30px monospace";
-        tCtx.fillText(`${s[0]}:`, x, y);
-        tCtx.fillStyle = "#0f0";
-        tCtx.fillText(s[1].toString(), x + 150, y);
-        
-        // 작은 게이지
-        tCtx.fillStyle = "#222";
-        tCtx.fillRect(x, y + 10, 300, 10);
-        tCtx.fillStyle = "#0f0";
-        tCtx.fillRect(x, y + 10, s[1] * 3, 10);
+        let x = (i % 2 === 0) ? 150 : 550;
+        let y = 500 + (Math.floor(i/2) * 80);
+        ctx.fillStyle = "#fff"; ctx.fillText(`${s[0]}: ${s[1]}`, x, y);
+        ctx.fillStyle = "#222"; ctx.fillRect(x, y+10, 300, 8);
+        ctx.fillStyle = "#0f0"; ctx.fillRect(x, y+10, s[1]*3, 8);
     });
 
-    // 하단 안내
+    // 하단 깜빡임
     if (Math.floor(Date.now() / 600) % 2 === 0) {
-        tCtx.fillStyle = "#fb0";
-        tCtx.font = "20px monospace";
-        tCtx.textAlign = "center";
-        tCtx.fillText(">> CLICK TO NEXT DATA <<", 512, 715);
+        ctx.textAlign = "center"; ctx.fillStyle = "#fb0";
+        ctx.fillText(">> PRESS TO SWITCH <<", 500, 710);
     }
+
+    requestAnimationFrame(draw);
 }
 
-canvas.addEventListener('click', () => { page = (page + 1) % pages.length; });
-
-const vs = `attribute vec2 p; varying vec2 v; void main(){v=(p+1.)*.5; gl_Position=vec4(p,0,1);}`;
-
-const fs = `
-    precision mediump float;
-    varying vec2 v;
-    uniform sampler2D t;
-    uniform float time;
-
-    // 개선된 렌즈 왜곡 (가운데 확대 현상 억제)
-    vec2 crtDistort(vec2 uv) {
-        uv = uv * 2.0 - 1.0;
-        float r2 = uv.x*uv.x + uv.y*uv.y;
-        
-        // 왜곡 강도는 유지하되, 전체적인 스케일을 조정해 확대 방지
-        float distortion = 0.18; 
-        uv *= (1.0 + distortion * r2);
-        
-        // 수치를 미세하게 줄여 전체 화면이 보이게 함
-        return uv * 0.9 + 0.5; 
-    }
-
-    void main() {
-        vec2 uv = crtDistort(v);
-
-        // 부드러운 모서리 마스킹
-        float mask = smoothstep(0.0, 0.02, uv.x) * smoothstep(1.0, 0.98, uv.x) *
-                     smoothstep(0.0, 0.02, uv.y) * smoothstep(1.0, 0.98, uv.y);
-
-        if(uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-            return;
-        }
-
-        vec2 fUv = vec2(uv.x, 1.0 - uv.y);
-        vec3 color = texture2D(t, fUv).rgb;
-
-        // 1. CRT 주사선 (Scanlines) - 더 촘촘하고 명확하게
-        float scanline = sin(uv.y * 800.0) * 0.12;
-        color -= scanline;
-
-        // 2. 미세한 지지직거림 (Grain)
-        float noise = (fract(sin(dot(uv, vec2(12.9898,78.233)*time)) * 43758.5453));
-        color += noise * 0.03;
-
-        // 3. 브라운관 유리 광택 (Lens Flare)
-        float dist = length(uv - 0.5);
-        float glare = Math.max(0.0, 1.0 - dist * 1.2);
-        color += glare * 0.1;
-
-        // 4. 색수차 (RGB Fringe)
-        float r = texture2D(t, fUv + vec2(0.0015, 0.0)).r;
-        float b = texture2D(t, fUv - vec2(0.0015, 0.0)).b;
-        color.r = r;
-        color.b = b;
-
-        gl_FragColor = vec4(color * mask, 1.0);
-    }
-`;
-
-const prog = gl.createProgram();
-const sh = (type, src) => {
-    const s = gl.createShader(type);
-    gl.shaderSource(s, src); gl.compileShader(s);
-    gl.attachShader(prog, s);
-};
-sh(gl.VERTEX_SHADER, vs); sh(gl.FRAGMENT_SHADER, fs);
-gl.linkProgram(prog); gl.useProgram(prog);
-
-const buf = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-const pLoc = gl.getAttribLocation(prog, "p");
-gl.enableVertexAttribArray(pLoc);
-gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
-
-const tex = gl.createTexture();
-gl.bindTexture(gl.TEXTURE_2D, tex);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-function loop(t) {
-    drawUI();
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textCanvas);
-    gl.uniform1f(gl.getUniformLocation(prog, "time"), t * 0.001);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    requestAnimationFrame(loop);
-}
-loop(0);
+canvas.addEventListener('click', () => { page = (page + 1) % data.length; });
+draw();
 </script>
 </body>
 </html>
