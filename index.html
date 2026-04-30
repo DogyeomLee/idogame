@@ -2,157 +2,133 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>동물의 왕국 포트폴리오</title>
+    <title>KBS 동물의 왕국 - 레트로 포트폴리오</title>
     <style>
-        /* 1. 배경: 어두운 나무 책상 느낌 */
+        /* 1. 환경 설정: 어두운 거실 */
         body {
-            background: #121212;
+            background-color: #050505;
             margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             overflow: hidden;
+            perspective: 1000px; /* 3D 공간감 */
         }
 
-        /* 2. 리얼한 플라스틱 모니터 프레임 */
-        .monitor-case {
+        /* 2. 묵직한 구형 모니터 베젤 (플라스틱 질감) */
+        .monitor-body {
             position: relative;
-            width: 95vw; /* 화면에 꽉 차게 */
-            max-width: 1200px;
+            width: 90vw;
+            max-width: 1000px;
             aspect-ratio: 4 / 3;
-            background: #2b2b2b; /* 진한 회색 플라스틱 */
-            /* 플라스틱 질감과 입체감을 위한 다중 그림자 */
-            border: 60px solid #3a3a3a;
-            border-radius: 80px;
+            background: #222;
+            padding: 40px;
+            border-radius: 10% / 5%;
             box-shadow: 
-                inset 10px 10px 30px rgba(0,0,0,0.8), 
-                inset -5px -5px 20px rgba(255,255,255,0.05),
-                20px 40px 80px rgba(0,0,0,0.9);
+                inset 0 0 50px #000,
+                20px 30px 60px rgba(0,0,0,0.8);
             display: flex;
             justify-content: center;
             align-items: center;
-            box-sizing: border-box;
         }
 
-        /* 모니터 아래 환기구 구멍 (리얼리티) */
-        .monitor-case::after {
-            content: "||||||||||||||||||||||";
-            position: absolute;
-            bottom: -45px;
-            color: #111;
-            font-size: 20px;
-            letter-spacing: 5px;
-        }
-
-        /* 3. 볼록한 브라운관 화면 */
-        .crt-screen {
+        /* 3. 물리적으로 볼록한 브라운관 유리 */
+        .crt-glass {
             position: relative;
             width: 100%;
             height: 100%;
-            background: #2d3436; /* 화면 꺼졌을 때 색상 */
-            border-radius: 100px / 40px; /* 구부러진 상하좌우 */
+            background: #000;
+            border-radius: 50% / 10%; /* 화면 자체를 둥글게 */
             overflow: hidden;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
-            display: flex;
-            flex-direction: column;
-            /* 폰트: 삼국지 3 느낌의 비트맵 폰트 강제 설정 */
-            font-family: 'DungGeunMo', 'Gulim', 'Courier New', monospace;
-            -webkit-font-smoothing: none;
+            box-shadow: 0 0 20px rgba(0,0,0,1);
+            transform: scale(1.05) rotateX(2deg); /* 약간 앞으로 튀어나온 느낌 */
         }
 
-        /* 실제 콘텐츠 영역: 사파리/밀림 테마 */
-        .content-area {
+        /* 실제 영상 송출 영역 */
+        .display-content {
             width: 100%;
             height: 100%;
-            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), 
-                        url('https://images.unsplash.com/photo-1516475429146-3625230b1de6?q=80&w=2000&auto=format&fit=crop'); /* 사파리 느낌 배경 */
+            background: url('https://images.unsplash.com/photo-1549366021-9f761d450615?q=80&w=2000') no-repeat center;
             background-size: cover;
             display: flex;
             flex-direction: column;
-            padding: 40px;
+            justify-content: flex-end; /* 자막 위치 */
+            padding: 60px;
             box-sizing: border-box;
-            color: #f0e68c; /* 카키/황토색 텍스트 */
-            text-shadow: 2px 2px 0px #000; /* 삼국지 글씨 스타일 */
+            animation: screen-flicker 0.01s infinite; /* 미세한 떨림 */
         }
 
-        /* 4. 왜곡 및 유리 질감 오버레이 */
-        .glass-overlay {
+        /* 4. 다큐멘터리 자막 폰트 (레트로 스타일) */
+        .subtitles {
+            font-family: 'Gulim', '돋움', sans-serif;
+            color: #ffffff;
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.4;
+            /* 90년대 자막 특유의 진한 검정 테두리 */
+            text-shadow: 
+                3px 3px 0 #000, -3px -3px 0 #000, 
+                3px -3px 0 #000, -3px 3px 0 #000,
+                0px 4px 5px rgba(0,0,0,0.8);
+            letter-spacing: -1px;
+        }
+
+        /* 5. 화면 왜곡 레이어 (비네팅, 스캔라인) */
+        .crt-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(
-                circle at 30% 30%,
-                rgba(255, 255, 255, 0.1) 0%,
-                rgba(0, 0, 0, 0.4) 100%
-            );
-            z-index: 20;
+            background: 
+                radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.5) 90%), /* 비네팅 */
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), /* 가로 스캔라인 */
+                linear-gradient(90deg, rgba(255,0,0,0.02), rgba(0,255,0,0.01), rgba(0,0,255,0.02)); /* RGB 정렬 불량 */
+            background-size: 100% 100%, 100% 4px, 3px 100%;
+            z-index: 10;
             pointer-events: none;
         }
 
-        .scanlines {
+        /* 화면 켤 때 지지직거리는 애니메이션 */
+        @keyframes screen-flicker {
+            0% { opacity: 0.99; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        /* 옛날 방송국 로고 */
+        .tv-logo {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%);
-            background-size: 100% 4px;
-            z-index: 21;
-            pointer-events: none;
-        }
-
-        /* 5. 삼국지/동물의 왕국 스타일 UI */
-        .wild-window {
-            border: 4px solid #4a3728; /* 나무색 테두리 */
-            background: rgba(45, 34, 24, 0.85); /* 짙은 갈색 투명 */
-            padding: 20px;
-            box-shadow: 5px 5px 0px #000;
-        }
-
-        h1 {
-            font-size: 40px;
-            color: #ffd700; /* 황금색 */
-            margin: 0 0 20px 0;
-            border-bottom: 3px double #ffd700;
-        }
-
-        .menu-item {
+            top: 40px;
+            right: 50px;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: serif;
+            font-weight: bold;
             font-size: 24px;
-            margin: 15px 0;
-            cursor: pointer;
-            transition: 0.2s;
+            text-shadow: 1px 1px 2px #000;
         }
-
-        .menu-item:hover {
-            color: #fff;
-            transform: translateX(10px);
-        }
-
-        .menu-item::before {
-            content: "▶ ";
-        }
-
     </style>
 </head>
 <body>
 
-<div class="monitor-case">
-    <div class="crt-screen">
-        <div class="glass-overlay"></div>
-        <div class="scanlines"></div>
+<div class="monitor-body">
+    <div class="crt-glass">
+        <div class="crt-overlay"></div>
         
-        <div class="content-area">
-            <div class="wild-window">
-                <h1>동물의 왕국 : 포트폴리오</h1>
-                <div class="menu-item">나의 일대기 보기</div>
-                <div class="menu-item">포획한 프로젝트들</div>
-                <div class="menu-item">서식지 연락처</div>
-                <hr style="border: 1px solid #4a3728;">
-                <p style="font-size: 18px; color: #a2ad91;">
-                    ※ 주의: 야생 개발자가 서식하고 있습니다. <br>
-                    함부로 먹이를 주지 마시오.
-                </p>
+        <div class="display-content">
+            <div class="tv-logo">KBS1</div>
+            
+            <div class="subtitles">
+                [오늘의 탐험]<br>
+                코드의 정글에서 살아남은 개발자 홍길동,<br>
+                그는 왜 깃허브 페이지에 서식하게 되었나...
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // 클릭하면 지지직거리는 효과음을 넣거나 화면을 끄고 켜는 인터랙션을 추가할 수 있습니다.
+</script>
 
 </body>
 </html>
