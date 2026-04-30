@@ -2,21 +2,28 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Fixed CRT Shader</title>
+    <title>Fixed CRT - Small Canvas</title>
     <style>
-        body { margin: 0; background: #050505; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        canvas { width: 800px; height: 600px; background: #000; border: 10px solid #222; border-radius: 20px; }
+        body { margin: 0; background: black; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        /* CSS는 최소한의 테두리와 그림자만 */
+        canvas {
+            background: #000;
+            border-radius: 20px;
+            border: 10px solid #222;
+            box-shadow: 0 0 50px rgba(0,2,0,0.5);
+        }
     </style>
 </head>
 <body>
-    <canvas id="crt"></canvas>
+    <!-- 캔버스 자체 크기를 처음부터 줄여서 정의 -->
+    <canvas id="crt" width="400" height="300"></canvas>
 
 <script>
 const canvas = document.getElementById("crt");
 const gl = canvas.getContext("webgl");
 
-canvas.width = 800;
-canvas.height = 600;
+// (중요) JS에서 다시 width/height를 800/600으로 바꾸지 마세요.
+// context를 가져온 순간 viewport는 400x300으로 잡힙니다.
 
 const vertex = `
     attribute vec2 position;
@@ -32,10 +39,9 @@ const fragment = `
     varying vec2 vUv;
     uniform float u_time;
 
-    // 곡률 보정 함수 (이게 틀리면 구석으로 쏠림)
     vec2 curve(vec2 uv) {
         uv = uv * 2.0 - 1.0;
-        vec2 offset = abs(uv.yx) / vec2(6.0, 4.0); 
+        vec2 offset = abs(uv.yx) / vec2(8.0, 6.0); // 곡률 살짝 조정
         uv = uv + uv * offset * offset;
         return uv * 0.5 + 0.5;
     }
@@ -43,41 +49,40 @@ const fragment = `
     void main() {
         vec2 uv = curve(vUv);
         
-        // 캔버스 범위 밖은 즉시 검정색 처리
         if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
         }
 
-        // 7색 컬러바 구현
         vec3 color;
         float x = uv.x;
-        if (x < 1.0/7.0) color = vec4(0.7, 0.7, 0.7, 1.0).rgb;      // White/Gray
-        else if (x < 2.0/7.0) color = vec3(0.7, 0.7, 0.0);           // Yellow
-        else if (x < 3.0/7.0) color = vec3(0.0, 0.7, 0.7);           // Cyan
-        else if (x < 4.0/7.0) color = vec3(0.0, 0.7, 0.0);           // Green
-        else if (x < 5.0/7.0) color = vec3(0.7, 0.0, 0.7);           // Magenta
-        else if (x < 6.0/7.0) color = vec3(0.7, 0.0, 0.0);           // Red
-        else color = vec3(0.0, 0.0, 0.7);                            // Blue
+        // 7색 컬러바
+        if (x < 1.0/7.0) color = vec3(0.8);          // White/Gray
+        else if (x < 2.0/7.0) color = vec3(0.8, 0.8, 0.0); // Yellow
+        else if (x < 3.0/7.0) color = vec3(0.0, 0.8, 0.8); // Cyan
+        else if (x < 4.0/7.0) color = vec3(0.0, 0.8, 0.0); // Green
+        else if (x < 5.0/7.0) color = vec3(0.8, 0.0, 0.8); // Magenta
+        else if (x < 6.0/7.0) color = vec3(0.8, 0.0, 0.0); // Red
+        else color = vec3(0.0, 0.0, 0.8);                // Blue
 
-        // 하단 검정/청색 바 (SMPTE 스타일 살짝 추가)
-        if (uv.y < 0.2) {
-            if (mod(uv.x * 7.0, 2.0) < 1.0) color *= 0.2;
-        }
+        if (uv.y < 0.2) color *= 0.3; // 하단 바
 
-        // 스캔라인 (움직임 추가)
-        float scanline = sin(uv.y * 500.0 + u_time * 2.0) * 0.06;
+        // 스캔라인
+        float scanline = sin(uv.y * 300.0 + u_time * 2.0) * 0.08;
         color -= scanline;
 
         // 비네팅 및 최종 출력
         float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
         color *= pow(vignette * 15.0, 0.2);
 
-        gl_FragColor = vec4(color, 1.0);
+        // 부드러운 테두리
+        float edge = smoothstep(0.0, 0.03, uv.x) * smoothstep(1.0, 0.97, uv.x) *
+                     smoothstep(0.0, 0.03, uv.y) * smoothstep(1.0, 0.97, uv.y);
+
+        gl_FragColor = vec4(color * edge, 1.0);
     }
 `;
 
-// 컴파일 및 버퍼 설정 (최적화)
 const program = gl.createProgram();
 const createShader = (t, s) => {
     const sh = gl.createShader(t);
@@ -90,10 +95,9 @@ gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, fragment));
 gl.linkProgram(program);
 gl.useProgram(program);
 
-const buffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+// 전체 화면 사각형 (변화 없음)
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-
 const pos = gl.getAttribLocation(program, "position");
 gl.enableVertexAttribArray(pos);
 gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
@@ -101,6 +105,8 @@ gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
 const timeLoc = gl.getUniformLocation(program, "u_time");
 
 function render(t) {
+    // 캔버스 크기가 바뀌면 viewport도 업데이트해야 함
+    // gl.viewport(0, 0, canvas.width, canvas.height); // 지금은 고정이라 생략 가능
     gl.uniform1f(timeLoc, t * 0.001);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     requestAnimationFrame(render);
