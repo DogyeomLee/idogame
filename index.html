@@ -2,14 +2,20 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Realistic CRT Amber Terminal</title>
+    <title>Extreme Realism CRT Terminal</title>
     <style>
+        /* 레트로 픽셀 폰트 */
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
+        :root {
+            --glow-color: #33ff33;
+            --bg-color: #050805;
+        }
+
         body {
-            background-color: #121212; /* 배경을 검정 대신 깊은 그레이로 */
-            background-image: radial-gradient(#222 0.5px, transparent 0.5px);
-            background-size: 24px 24px; /* 배경에 미세한 패턴 추가 */
+            background-color: #1a1a1a; /* 어두운 작업실 느낌의 배경 */
+            background-image: 
+                radial-gradient(circle at center, #222 0%, #111 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -18,117 +24,135 @@
             overflow: hidden;
         }
 
-        /* 4:3 비율의 곡면 컨테이너 */
-        .crt-container {
+        /* 4:3 비율의 CRT 모니터 본체 */
+        .crt-monitor {
             position: relative;
-            width: 80vw;
-            max-width: 900px;
+            width: 85vw;
+            max-width: 1000px;
             aspect-ratio: 4 / 3;
-            /* 렌즈 왜곡 효과: 화면을 앞으로 밀어내고 살짝 구부림 */
-            transform: perspective(1000px) rotateX(2deg) scale(1.05);
-            filter: contrast(1.2) brightness(1.1);
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 50px;
+            box-shadow: 
+                0 50px 100px rgba(0,0,0,0.8),
+                inset 0 2px 10px rgba(255,255,255,0.1);
+            /* SVG 필터를 화면 전체에 적용하여 실제 볼록 렌즈 효과 구현 */
+            filter: url(#distort); 
         }
 
-        /* 실제 렌즈처럼 보이기 위한 구형 왜곡 마스크 */
-        .screen {
+        /* 실제 구동되는 화면 영역 */
+        .screen-main {
             position: relative;
             width: 100%;
             height: 100%;
-            background: #1a1400; /* 호박색 베이스의 어두운 배경 */
-            border-radius: 50% / 8%; /* 상하좌우 곡률 */
-            box-shadow: 
-                0 0 50px rgba(0,0,0,1),
-                inset 0 0 100px rgba(0,0,0,0.8),
-                inset 0 0 20px rgba(255, 176, 0, 0.1);
+            background: var(--bg-color);
+            border-radius: 40px;
             overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            border: 10px solid #222;
+            border: 15px solid #111;
+            box-shadow: inset 0 0 100px rgba(0,0,0,1);
         }
 
-        /* 레트로 호박색 텍스트 */
-        .terminal-text {
-            font-family: 'VT323', monospace; /* 레트로 픽셀 느낌 폰트 */
-            color: #ffb000; /* 정통 Amber 색상 */
-            font-size: 6vw;
+        /* 텍스트 스타일 */
+        .terminal-content {
+            font-family: 'VT323', monospace;
+            color: var(--glow-color);
+            font-size: 7vw;
             text-align: center;
-            line-height: 1.2;
-            text-transform: uppercase;
-            /* 글자 번짐(Glow) 효과 */
-            text-shadow: 
-                0 0 2px rgba(255, 176, 0, 1),
-                0 0 15px rgba(255, 176, 0, 0.6),
-                0 0 30px rgba(255, 176, 0, 0.3);
             z-index: 5;
-            animation: textShadow 1.5s infinite;
+            /* 글자 자체에 미세한 번짐 효과 */
+            filter: blur(0.5px);
+            text-shadow: 
+                0 0 10px rgba(51, 255, 51, 0.8),
+                0 0 20px rgba(51, 255, 51, 0.4);
+            animation: textFlicker 0.05s infinite;
         }
 
-        /* 텍스트 미세 떨림 */
-        @keyframes textShadow {
-            0% { text-shadow: 0 0 4px #ffb000; }
-            50% { text-shadow: 0 0 20px #ffb000, 2px 2px 2px rgba(255,0,0,0.2); }
-            100% { text-shadow: 0 0 4px #ffb000; }
-        }
-
-        /* 스캔라인 및 노이즈 오버레이 */
-        .crt-overlay {
+        /* 1. RGB 서브픽셀 격자 (매우 세밀한 격자) */
+        .pixel-grid {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(
-                rgba(18, 16, 16, 0) 50%, 
-                rgba(0, 0, 0, 0.2) 50%
-            ), 
-            linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
-            background-size: 100% 3px, 3px 100%;
-            pointer-events: none;
+            background-image: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.05), rgba(0, 0, 255, 0.05));
+            background-size: 100% 3px, 4px 100%;
             z-index: 10;
-        }
-
-        /* 볼록한 유리 광택 */
-        .glass-glare {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(
-                circle at 20% 20%, 
-                rgba(255, 255, 255, 0.08) 0%, 
-                transparent 40%
-            );
             pointer-events: none;
-            z-index: 12;
-            border-radius: 50% / 8%;
         }
 
-        /* 화면 깜빡임 애니메이션 */
-        .flicker {
+        /* 2. 화면 전체를 지나가는 주사선(Scanline) */
+        .scanline {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100px;
+            background: linear-gradient(to bottom, transparent, rgba(51, 255, 51, 0.03), transparent);
+            opacity: 0.4;
+            animation: moveScanline 8s linear infinite;
+            z-index: 11;
+        }
+
+        /* 3. 볼록한 유리의 강력한 반사광 */
+        .glass-reflection {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 176, 0, 0.02);
-            opacity: 0;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 30%);
             z-index: 15;
             pointer-events: none;
-            animation: flicker 0.1s infinite;
         }
 
-        @keyframes flicker {
-            0% { opacity: 0.1; }
-            100% { opacity: 0.02; }
+        /* 4. 화면 구석 비네팅 (가장자리 어둡게) */
+        .vignette {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 150px rgba(0,0,0,0.9);
+            z-index: 12;
+            pointer-events: none;
+        }
+
+        /* 애니메이션 효과들 */
+        @keyframes moveScanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+
+        @keyframes textFlicker {
+            0% { opacity: 0.9931; }
+            100% { opacity: 1; }
         }
     </style>
 </head>
 <body>
 
-    <div class="crt-container">
-        <div class="screen">
-            <div class="terminal-text">
-                SYSTEM READY<br>
-                INSERT COIN_
+    <!-- [핵심] 화면을 볼록하게 왜곡시키는 SVG 필터 -->
+    <svg width="0" height="0" style="position:absolute;">
+        <defs>
+            <filter id="distort">
+                <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="1" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="0" /> <!-- 기본 구조 -->
+                <!-- 볼록 렌즈 효과를 위한 좌표 변형 매트릭스 -->
+                <feComponentTransfer>
+                   <feFuncA type="linear" slope="1" />
+                </feComponentTransfer>
+            </filter>
+        </defs>
+    </svg>
+
+    <div class="crt-monitor">
+        <div class="screen-main">
+            <!-- 내부 요소들 -->
+            <div class="terminal-content">
+                SYSTEM LOADED<br>
+                INSERT COIN _
             </div>
-            
-            <!-- CRT 강화 효과 레이어들 -->
-            <div class="crt-overlay"></div>
-            <div class="glass-glare"></div>
-            <div class="flicker"></div>
+
+            <!-- 효과 오버레이 -->
+            <div class="pixel-grid"></div>
+            <div class="scanline"></div>
+            <div class="vignette"></div>
+            <div class="glass-reflection"></div>
         </div>
     </div>
 
