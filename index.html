@@ -2,10 +2,10 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Wildlife TV</title>
+    <title>실사 같은 레트로 와일드라이프 TV</title>
     <style>
         body {
-            background-color: #050505;
+            background-color: #0a0a0a; /* 더 어두운 배경 */
             margin: 0;
             display: flex;
             justify-content: center;
@@ -14,92 +14,121 @@
             overflow: hidden;
         }
 
-        /* 1. TV 외관 (실제 사진 소스를 배경으로 활용하는 구조) */
-        .tv-wrapper {
+        /* 1. TV 외관 (실제 이미지 소스를 프레임으로 활용) */
+        .tv-frame {
             position: relative;
-            width: 1000px; /* 큰 화면 */
-            height: 750px;
+            /* 원본 이미지 해상도 (3150x2362) 기준 */
+            width: 3150px; 
+            height: 2362px;
+            
             /* 실제 TV의 질감을 가진 이미지를 배경으로 사용 */
-            background: url('https://images.rawpixel.com/image_png_800/czNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy9tZXNzH3YvcG5nL2VsZW1lbnRzL3Jhd3BpeGVsLWl0ZW0taWRlYS00NTU4NjkucG5n') no-repeat center;
+            /* 주의: 실제 이 코드를 사용하려면 'image_1.png' 파일을 HTML과 같은 경로에 두거나, 실제 이미지 URL로 교체해야 합니다. */
+            background: url('image_1.png') no-repeat center;
             background-size: contain;
+            
             display: flex;
             justify-content: center;
             align-items: center;
+            
+            /* 프레임을 전체적으로 약간 줄여서 화면에 맞춥니다. */
+            transform: scale(0.35); /* 브라우저 화면에 맞게 크기 조절 (필요에 따라 조정) */
+            transform-origin: center center;
         }
 
-        /* 2. 화면 영역 (TV 프레임 안쪽 구멍에 딱 맞춤) */
+        /* 2. 화면 영역 (TV 프레임 안쪽 구멍에 딱 맞춤 - 이미지 해상도 기준) */
         .screen-area {
             position: absolute;
-            width: 615px;  /* 이미지의 화면 구멍 크기에 맞게 조절 필요 */
-            height: 460px;
-            top: 108px;    /* 이미지 위치에 맞게 세밀하게 조정 */
-            left: 145px;
+            
+            /* 원본 이미지 3150x2362에서 검은색 화면 영역의 좌표와 크기를 정확히 측정 */
+            width: 2010px;  /* 실제 화면 가로 크기 */
+            height: 1390px; /* 실제 화면 세로 크기 */
+            top: 410px;     /* 상단 프레임 두께 */
+            left: 690px;    /* 좌측 프레임 두께 */
+            
             background: #000;
-            border-radius: 40px / 20px; /* 화면의 미세한 곡률 */
+            
+            /* 실제 CRT 화면의 둥근 모서리 */
+            border-radius: 120px / 90px;
             overflow: hidden;
-            z-index: -1; /* TV 프레임 아래로 배치 */
+            
+            /* 실제 화면처럼 보이도록 안쪽으로 그림자 효과 */
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
         }
 
         /* 3. 진짜 다큐멘터리 같은 영상 소스 및 효과 */
-        .video-overlay {
+        .video-content {
             width: 100%;
             height: 100%;
+            /* 실제 코딩할 때는 HTML5 <video> 태그를 사용하는 것이 좋습니다. */
             background: url('https://images.unsplash.com/photo-1549366021-9f761d450615?q=80&w=1000') no-repeat center;
             background-size: cover;
-            filter: contrast(1.1) saturate(1.2) sepia(0.2); /* 옛날 영상 색감 */
+            
+            /* 옛날 영상 색감 필터 */
+            filter: contrast(1.1) saturate(1.2) sepia(0.2); 
+            
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
+            justify-content: flex-end; /* 자막을 아래로 */
             align-items: center;
-            padding-bottom: 40px;
+            padding-bottom: 120px; /* 자막 하단 여백 */
             box-sizing: border-box;
         }
 
-        /* 4. [핵심] 브라운관 질감 필터 (지지직거리는 노이즈) */
-        .crt-noise {
+        /* 4. [핵심] 브라운관 질감 필터 (지지직거리는 노이즈 및 주사선 효과) */
+        .crt-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_filmgrain.gif'); /* 필름 노이즈 */
-            opacity: 0.15;
+            background: 
+                url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_filmgrain.gif') repeat, /* 필름 노이즈 */
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); /* 주사선 효과 */
+            background-size: auto, 100% 4px;
+            opacity: 0.2; /* 노이즈 세기 조절 */
             pointer-events: none;
             z-index: 5;
         }
 
-        /* 5. 90년대 자막 (삼국지+다큐멘터리 폰트) */
+        /* 5. 90년대 자막 (방송국 폰트 스타일) */
         .subtitles {
             color: #fff;
-            font-family: 'Gulim', 'Dotum', sans-serif;
-            font-size: 28px;
+            font-family: 'Gulim', 'Dotum', sans-serif; /* 굴림체 계열 */
+            font-size: 80px; /* 큰 프레임 해상도에 맞춰 크기 조정 */
             font-weight: bold;
             text-align: center;
-            line-height: 1.4;
-            /* 90년대 방송국 특유의 진한 검정 외곽선 */
+            line-height: 1.5;
+            letter-spacing: -2px; /* 자막 글자 간격 좁힘 */
+            
+            /* 90년대 방송국 특유의 진한 검정 외곽선 (텍스트 섀도우) */
             text-shadow: 
-                2px 2px 0 #000, -2px -2px 0 #000, 
-                2px -2px 0 #000, -2px 2px 0 #000,
-                0 0 8px rgba(0,0,0,1);
+                4px 4px 0 #000, -4px -4px 0 #000, 
+                4px -4px 0 #000, -4px 4px 0 #000,
+                0 0 15px rgba(0,0,0,1);
             z-index: 10;
         }
 
         /* 방송국 로고 */
         .logo {
             position: absolute;
-            top: 30px;
-            right: 40px;
+            top: 90px;
+            right: 120px;
             color: rgba(255,255,255,0.4);
             font-family: serif;
-            font-size: 20px;
+            font-size: 60px;
             font-weight: bold;
+            z-index: 15;
         }
     </style>
 </head>
 <body>
 
-<div class="tv-wrapper">
-    <!-- 화면 구멍 안쪽 -->
+<!-- TV 프레임 (실제 이미지) -->
+<div class="tv-frame">
+    <!-- 실제 화면이 표시되는 영역 -->
     <div class="screen-area">
-        <div class="crt-noise"></div>
-        <div class="video-overlay">
+        <!-- CRT 질감 효과 -->
+        <div class="crt-overlay"></div>
+        
+        <!-- 영상 및 자막 -->
+        <div class="video-content">
             <div class="logo">KBS1</div>
             <div class="subtitles">
                 그는 조용히 에디터를 엽니다...<br>
