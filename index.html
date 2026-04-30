@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>90s Retro Game Portfolio - Clear CRT</title>
+    <title>Fixed Retro Portfolio</title>
     <style>
         * { margin: 0; padding: 0; overflow: hidden; }
         body, html { 
@@ -13,7 +13,7 @@
         canvas { 
             display: block; 
             aspect-ratio: 4 / 3;
-            height: 98vh; /* 화면에 더 꽉 차게 조절 */
+            height: 98vh; 
             width: auto;
             cursor: pointer;
         }
@@ -24,98 +24,80 @@
 
 <script>
 const canvas = document.getElementById("crt");
-const gl = canvas.getContext("webgl", { antialias: true, alpha: false });
+const gl = canvas.getContext("webgl");
 
-// --- 고해상도 텍스트 캔버스 (글자 깨짐 방지 핵심) ---
 const textCanvas = document.createElement("canvas");
 const tCtx = textCanvas.getContext("2d");
-textCanvas.width = 2048; 
-textCanvas.height = 1536;
+// 해상도를 높여서 렌더링 (글자 깨짐 방지)
+textCanvas.width = 1024;
+textCanvas.height = 768;
 
 let currentPage = 0;
 const pages = [
     {
         title: "CHARACTER PROFILE",
-        name: "사용자 (USER)",
-        job: "웹 개발자 / 디자이너",
-        loc: "대한민국 (KOREA)",
-        stats: [
-            { label: "JAVASCRIPT", val: 92 },
-            { label: "WEBGL/CANVAS", val: 85 },
-            { label: "CREATIVITY", val: 99 },
-            { label: "STAMINA", val: 70 }
-        ]
+        info: { name: "사용자 (USER)", class: "WEB DEVELOPER", area: "KOREA" },
+        stats: [["JAVASCRIPT", 92], ["WEBGL", 85], ["DESIGN", 80]]
     },
     {
-        title: "EQUIPMENT / SKILLS",
-        name: "TECHNICAL STACK",
-        job: "FRONT-END EXPERT",
-        loc: "VIRTUAL WORLD",
-        stats: [
-            { label: "REACT/NEXT", val: 88 },
-            { label: "TYPESCRIPT", val: 80 },
-            { label: "CSS/SASS", val: 95 },
-            { label: "GIT/GITHUB", val: 90 }
-        ]
+        title: "TECHNICAL SKILLS",
+        info: { name: "SKILL TREE", class: "FRONT-END MAGE", area: "SEOUL" },
+        stats: [["REACT", 90], ["TYPESCRIPT", 82], ["CSS", 95]]
     }
 ];
 
-function drawClassicUI() {
+function drawUI() {
     const data = pages[currentPage];
+    // 배경: 삼국지 특유의 암청색
+    tCtx.fillStyle = "#000520"; 
+    tCtx.fillRect(0, 0, 1024, 768);
     
-    // 배경 (고전 게임 특유의 딥 블루)
-    tCtx.fillStyle = "#000033"; 
-    tCtx.fillRect(0, 0, 2048, 1536);
-    
-    // 이중 금색 테두리
-    tCtx.strokeStyle = "#aa8800";
-    tCtx.lineWidth = 20;
-    tCtx.strokeRect(40, 40, 1968, 1456);
-    tCtx.lineWidth = 4;
-    tCtx.strokeStyle = "#ffcc00";
-    tCtx.strokeRect(70, 70, 1908, 1396);
+    // 테두리: 골드 & 옐로우
+    tCtx.strokeStyle = "#850";
+    tCtx.lineWidth = 12;
+    tCtx.strokeRect(20, 20, 984, 728);
+    tCtx.strokeStyle = "#fb0";
+    tCtx.lineWidth = 2;
+    tCtx.strokeRect(35, 35, 954, 698);
 
-    // 상단 제목 바
-    tCtx.fillStyle = "#aa8800";
-    tCtx.fillRect(70, 70, 1908, 120);
-    tCtx.fillStyle = "#000";
-    tCtx.font = "bold 70px 'Courier New', monospace";
-    tCtx.textAlign = "center";
-    tCtx.fillText(data.title, 1024, 155);
-
-    // 텍스트 정보
-    tCtx.textAlign = "left";
+    // 제목 바
+    tCtx.fillStyle = "#850";
+    tCtx.fillRect(35, 35, 954, 60);
     tCtx.fillStyle = "#fff";
-    tCtx.font = "60px 'Courier New', monospace";
-    
-    tCtx.fillText(`NAME  : ${data.name}`, 160, 360);
-    tCtx.fillText(`CLASS : ${data.job}`, 160, 480);
-    tCtx.fillText(`AREA  : ${data.loc}`, 160, 600);
-    
-    // 능력치 게이지
+    tCtx.font = "bold 32px sans-serif";
+    tCtx.textAlign = "center";
+    tCtx.fillText(data.title, 512, 75);
+
+    // 본문 (굵은 폰트로 변경)
+    tCtx.textAlign = "left";
+    tCtx.font = "bold 30px sans-serif";
+    tCtx.fillStyle = "#fff";
+    tCtx.fillText(`NAME  : ${data.info.name}`, 100, 200);
+    tCtx.fillText(`CLASS : ${data.info.class}`, 100, 270);
+    tCtx.fillText(`AREA  : ${data.info.area}`, 100, 340);
+
+    // 게이지 바
     data.stats.forEach((s, i) => {
-        let y = 800 + (i * 140);
+        let y = 450 + (i * 80);
         tCtx.fillStyle = "#ccc";
-        tCtx.fillText(s.label, 160, y);
-        
-        tCtx.fillStyle = "#222";
-        tCtx.fillRect(700, y - 50, 800, 60); // 배경
-        tCtx.fillStyle = "#00ffff"; 
-        tCtx.fillRect(700, y - 50, s.val * 8, 60);
+        tCtx.fillText(s[0], 100, y);
+        tCtx.fillStyle = "#111";
+        tCtx.fillRect(350, y - 25, 400, 30);
+        tCtx.fillStyle = "#0ff";
+        tCtx.fillRect(350, y - 25, s[1] * 4, 30);
         tCtx.fillStyle = "#fff";
-        tCtx.fillText(s.val.toString(), 1550, y);
+        tCtx.fillText(s[1].toString(), 770, y);
     });
 
-    // 하단 안내 (깜빡임)
-    tCtx.textAlign = "center";
-    tCtx.fillStyle = (Math.floor(Date.now() / 500) % 2) ? "#ffff00" : "#555500";
-    tCtx.font = "50px 'Courier New', monospace";
-    tCtx.fillText(">> CLICK TO NEXT PAGE <<", 1024, 1430);
+    // 깜빡이는 안내문구
+    if (Math.floor(Date.now() / 500) % 2 === 0) {
+        tCtx.fillStyle = "#ff0";
+        tCtx.font = "bold 25px sans-serif";
+        tCtx.fillText(">> CLICK TO VIEW NEXT <<", 350, 715);
+    }
 }
 
-canvas.addEventListener('click', () => {
-    currentPage = (currentPage + 1) % pages.length;
-});
+canvas.addEventListener('click', () => { currentPage = (currentPage + 1) % pages.length; });
 
 const vertex = `
     attribute vec2 position;
@@ -127,64 +109,44 @@ const vertex = `
 `;
 
 const fragment = `
-    precision highp float;
+    precision mediump float;
     varying vec2 vUv;
-    uniform float u_time;
     uniform sampler2D u_texture;
-
-    // 가독성을 확보한 곡률 (수치 최적화)
-    vec2 curve(vec2 uv) {
-        uv = uv * 2.0 - 1.0;
-        vec2 offset = abs(uv.yx) / vec2(6.0, 5.0); 
-        uv = uv + uv * offset * offset;
-        return uv * 0.96 + 0.5;
-    }
+    uniform float u_time;
 
     void main() {
-        vec2 uv = curve(vUv);
-        vec2 flippedUv = vec2(uv.x, 1.0 - uv.y);
+        // 뒤집힘 방지 및 텍스처 좌표 (왜곡 제거하여 글자 선명도 확보)
+        vec2 uv = vec2(vUv.x, 1.0 - vUv.y);
+        
+        // 원본 색상 (겹침 효과 제거)
+        vec3 color = texture2D(u_texture, uv).rgb;
 
-        if (flippedUv.x < 0.0 || flippedUv.x > 1.0 || flippedUv.y < 0.0 || flippedUv.y > 1.0) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-            return;
-        }
-
-        vec3 color = texture2D(u_texture, flippedUv).rgb;
-
-        // 1. 미세한 스캔라인 (가독성 위해 얇게)
-        float scanline = sin(uv.y * 1000.0) * 0.04;
+        // 아주 미세한 스캔라인만 배경에 입힘
+        float scanline = sin(uv.y * 600.0) * 0.02;
         color -= scanline;
 
-        // 2. 아주 미세한 RGB Shift (번짐 최소화)
-        float r = texture2D(u_texture, flippedUv + vec2(0.0005, 0.0)).r;
-        float b = texture2D(u_texture, flippedUv - vec2(0.0005, 0.0)).b;
-        color.r = r;
-        color.b = b;
-
-        // 3. 비네팅
-        float vignette = pow(uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y) * 15.0, 0.2);
+        // 비네팅 (가장자리 분위기)
+        float vignette = pow(vUv.x * vUv.y * (1.0 - vUv.x) * (1.0 - vUv.y) * 15.0, 0.15);
         color *= (vignette + 0.1);
-
-        // 4. 아주 미세한 깜빡임
-        color *= 1.0 + 0.01 * sin(u_time * 50.0);
 
         gl_FragColor = vec4(color, 1.0);
     }
 `;
 
+function createShader(gl, type, source) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, source); gl.compileShader(s);
+    return s;
+}
+
 const program = gl.createProgram();
-const compile = (t, s) => {
-    const sh = gl.createShader(t);
-    gl.shaderSource(sh, s); gl.compileShader(sh);
-    return sh;
-};
-gl.attachShader(program, compile(gl.VERTEX_SHADER, vertex));
-gl.attachShader(program, compile(gl.FRAGMENT_SHADER, fragment));
+gl.attachShader(program, createShader(gl.VERTEX_SHADER, vertex));
+gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, fragment));
 gl.linkProgram(program); gl.useProgram(program);
 
 const buffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
 const pos = gl.getAttribLocation(program, "position");
 gl.enableVertexAttribArray(pos);
 gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
@@ -196,25 +158,14 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-const timeLoc = gl.getUniformLocation(program, "u_time");
-
 function render(t) {
-    drawClassicUI(); 
+    drawUI();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textCanvas);
-    gl.uniform1f(timeLoc, t * 0.001);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     requestAnimationFrame(render);
 }
-
-function resize() {
-    canvas.height = window.innerHeight;
-    gl.viewport(0, 0, canvas.width, canvas.height);
-}
-
-window.addEventListener('resize', resize);
-resize();
-requestAnimationFrame(render);
+render();
 </script>
 </body>
 </html>
