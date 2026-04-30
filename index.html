@@ -2,16 +2,13 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Realistic Retro LG TV Portfolio</title>
+    <title>Retro CRT Interface</title>
     <style>
-        :root {
-            --tv-beige: #e2d7c7;
-            --tv-orange: #d13000;
-            --screen-glow: rgba(100, 200, 255, 0.15);
-        }
+        /* 1. 기본 배경 및 폰트 설정 */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
         body {
-            background: radial-gradient(circle at center, #333 0%, #000 100%);
+            background-color: #050505;
             margin: 0;
             display: flex;
             justify-content: center;
@@ -20,169 +17,140 @@
             overflow: hidden;
         }
 
-        /* TV 본체 - 거대한 부피감과 그림자 */
-        .tv-unit {
+        /* 2. 4:3 비율 유지용 컨테이너 */
+        .monitor-wrapper {
+            width: 80vw;
+            max-width: 1000px;
+            aspect-ratio: 4 / 3;
             position: relative;
-            width: 1000px;
-            height: 780px;
-            background: var(--tv-beige);
-            /* 실제 플라스틱 질감을 위한 다중 그림자 */
-            border-radius: 120px 120px 150px 150px;
+            background: #000;
+            /* 브라운관 특유의 볼록한 테두리 */
             box-shadow: 
-                inset 15px 15px 40px rgba(255,255,255,0.7),
-                inset -15px -15px 40px rgba(0,0,0,0.2),
-                50px 50px 100px rgba(0,0,0,0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* 전면 오렌지 배젤 - 입체적인 틀 구조 */
-        .orange-bezel {
-            position: relative;
-            width: 900px;
-            height: 650px;
-            background: var(--tv-orange);
-            border-radius: 80px 80px 110px 110px;
-            box-shadow: 
-                inset 0 10px 20px rgba(255,255,255,0.4),
-                inset 0 -10px 20px rgba(0,0,0,0.5),
-                0 10px 30px rgba(0,0,0,0.3);
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            padding-right: 50px;
-        }
-
-        /* 굴곡진 유리 화면 컨테이너 (어안 렌즈 효과) */
-        .crt-glass {
-            position: relative;
-            width: 700px;
-            height: 520px;
-            background: #050505;
-            border-radius: 50% / 15%; /* 볼록한 브라운관 형태 */
-            border: 12px solid #1a1a1a;
+                0 0 100px rgba(0, 0, 0, 1),
+                inset 0 0 100px rgba(0, 255, 0, 0.05);
+            border-radius: 4% / 6%; 
             overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,1);
         }
 
-        /* 내부 스크린 콘텐츠 */
-        .screen-inner {
+        /* 3. CRT 렌즈 왜곡 효과 (핵심) */
+        .screen-content {
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
-            display: flex;
-            flex-direction: column;
             padding: 40px;
             box-sizing: border-box;
-            color: #eee;
-            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(180deg, #0d120d 0%, #050805 100%);
+            display: flex;
+            flex-direction: column;
+            color: #33ff33;
+            font-family: 'Press Start 2P', cursive;
+            line-height: 1.6;
+            /* 구형 왜곡 애니메이션 대용: 화면이 살짝 부풀어 보임 */
+            border-radius: 50% / 10%;
             position: relative;
+            z-index: 1;
         }
 
-        /* 실사 같은 유리 반사광 (Glossy Effect) */
-        .glass-reflection {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(
-                120deg, 
-                rgba(255,255,255,0.15) 0%, 
-                rgba(255,255,255,0.05) 20%, 
-                transparent 50%
-            );
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        /* CRT 주사선 및 노이즈 */
-        .crt-effects {
+        /* 4. CRT 물리적 효과 레이어 */
+        .crt-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: 
-                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
-                radial-gradient(var(--screen-glow), transparent);
-            background-size: 100% 4px, cover;
-            z-index: 4;
+                /* 1: 가로 주사선 (Scanlines) */
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                /* 2: 미세한 RGB 마스크 격자 */
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            z-index: 5;
             pointer-events: none;
-            opacity: 0.6;
         }
 
-        /* 은색 금속 다리 - 정교한 그래디언트 */
-        .chrome-leg {
+        /* 5. 정전기 노이즈 및 깜빡임 */
+        .crt-overlay::after {
+            content: " ";
+            display: block;
             position: absolute;
-            bottom: -40px;
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(145deg, #ffffff, #888, #444);
-            clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
-            z-index: -1;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 6;
+            pointer-events: none;
+            animation: flicker 0.12s infinite;
         }
-        .leg-left { left: 150px; transform: rotate(-5deg); }
-        .leg-right { right: 150px; transform: rotate(5deg); }
 
-        /* 로고 및 디테일 */
-        .brand-logo {
+        /* 6. 화면 상단 반사광 (유리 느낌) */
+        .glass-glare {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255,255,255,0.6);
-            font-size: 18px;
-            letter-spacing: 3px;
-            font-weight: 800;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(
+                circle at 50% -20%, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                transparent 50%
+            );
+            z-index: 7;
+            pointer-events: none;
         }
 
-        /* 포트폴리오 내용 스타일 */
-        .project-card {
-            background: rgba(255,255,255,0.05);
-            border-left: 4px solid var(--tv-orange);
-            padding: 15px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(2px);
+        /* 게임 스타일 UI 요소 */
+        .header {
+            border-bottom: 4px double #33ff33;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .menu-item {
+            margin: 15px 0;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .menu-item:hover {
+            background: #33ff33;
+            color: #000;
+        }
+
+        .blink { animation: blink 0.8s step-end infinite; }
+
+        /* 애니메이션 정의 */
+        @keyframes flicker {
+            0% { opacity: 0.1; }
+            50% { opacity: 0.15; }
+            100% { opacity: 0.1; }
+        }
+
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
         }
     </style>
 </head>
 <body>
 
-<div class="tv-unit">
-    <div class="chrome-leg leg-left"></div>
-    <div class="chrome-leg leg-right"></div>
-
-    <div class="orange-bezel">
-        <!-- 스피커 그릴 -->
-        <div style="position:absolute; left:40px; width:60px; height:200px; background-image:radial-gradient(#222 1.5px, transparent 1.5px); background-size:8px 8px; opacity:0.6;"></div>
-        
-        <!-- CRT 브라운관 -->
-        <div class="crt-glass">
-            <div class="glass-reflection"></div>
-            <div class="crt-effects"></div>
-            
-            <div class="screen-inner">
-                <h2 style="color: var(--tv-orange); border-bottom: 2px solid #444; padding-bottom: 10px;">PORTFOLIO_v1.0</h2>
-                
-                <div class="project-card">
-                    <h3 style="margin:0 0 10px 0;">[01] UNREAL ENGINE GAME</h3>
-                    <p style="margin:0; font-size: 14px; color: #aaa;">고퀄리티 3D 액션 RPG 개발 중...</p>
-                </div>
-
-                <div class="project-card">
-                    <h3 style="margin:0 0 10px 0;">[02] RETRO SHADER FX</h3>
-                    <p style="margin:0; font-size: 14px; color: #aaa;">CSS와 GLSL을 이용한 화면 효과 구현</p>
-                </div>
-                
-                <div style="margin-top: auto; font-size: 12px; color: #44ff44; opacity: 0.7;">
-                    ● SYSTEM: ONLINE <br>
-                    ● MEMORY: OPTIMIZED
-                </div>
-            </div>
+<div class="monitor-wrapper">
+    <!-- CRT 특수 효과 -->
+    <div class="crt-overlay"></div>
+    <div class="glass-glare"></div>
+    
+    <!-- 실제 내용 -->
+    <div class="screen-content">
+        <div class="header">
+            <span>PLAYER: DEV</span>
+            <span>SCORE: 9999</span>
         </div>
 
-        <div class="brand-logo">LG Retro</div>
-    </div>
+        <div class="main-body">
+            <h1 style="font-size: 24px; text-shadow: 4px 4px #c00;">INSERT COIN</h1>
+            <p style="font-size: 12px; margin-top: 40px;">-- SELECT MISSION --</p>
+            
+            <div class="menu-item">> PROJECT_NEON_STRIKE</div>
+            <div class="menu-item">> SKILL_TREE_LEVEL_99</div>
+            <div class="menu-item">> CONTACT_TERMINAL</div>
+        </div>
 
-    <!-- 전원 다이얼 -->
-    <div style="position:absolute; bottom:25px; width:70px; height:70px; background:radial-gradient(#eee, #999); border-radius:50%; border:5px solid var(--tv-beige); box-shadow: 0 5px 15px rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center;">
-        <div style="width:4px; height:30px; background:#d13000; transform:rotate(45deg);"></div>
+        <div style="margin-top: auto; font-size: 10px; text-align: center;">
+            © 1994 GAME_DEV_INC. <span class="blink">_</span>
+        </div>
     </div>
 </div>
 
