@@ -2,137 +2,126 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Retro CRT Fisheye</title>
+    <title>Skeletal Fairy on Mars TV</title>
     <style>
-        body, html {
+        body {
+            background-color: #111; /* 전체 어두운 배경 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             margin: 0;
-            padding: 0;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        /* 텔레비전 케이스 프레임 */
+        .tv-bezel {
+            width: 90vmin; /* 화면 크기에 맞게 조절 */
+            max-width: 600px;
+            aspect-ratio: 4 / 3;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); /* 금속/플라스틱 느낌 */
+            border-radius: 10% / 15%; /* 곡면 베젤 */
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.7);
+            padding: 30px; /* 내부 화면 간격 */
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 텔레비전 화면 내부 */
+        .tv-screen {
             width: 100%;
             height: 100%;
-            background-color: #050505; /* 실제 모니터 밖 어두운 공간 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background-color: #000;
+            border-radius: 8% / 12%; /* 더 둥근 화면 곡면 */
             overflow: hidden;
-            font-family: 'Dotum', '돋움', sans-serif;
-        }
-
-        /* 1. 실제 유리알처럼 볼록한 화면 몸체 */
-        .crt-container {
             position: relative;
-            width: 90vw;
-            height: calc(90vw * 0.75);
-            max-height: 90vh;
-            max-width: calc(90vh * 1.33);
-            
-            /* 핵심: 모서리를 안쪽으로 강하게 깎아서 볼록한 유리 구체 느낌 생성 */
-            border-radius: 50% / 15%; 
-            background: #111;
-            box-shadow: 
-                0 0 100px rgba(0,0,0,1),
-                inset 0 0 100px rgba(0,0,0,0.8);
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border: 10px solid #1a1a1a; /* 아주 얇은 모니터 끝 테두리만 */
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.9); /* 화면 깊이감 */
         }
 
-        /* 2. 화면 내부 콘텐츠 레이어 (왜곡 효과 중심) */
-        .screen-content {
-            width: 120%; /* 왜곡을 위해 실제보다 크게 설정 */
-            height: 120%;
-            background: #1a1e26;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            
-            /* 콘텐츠 자체도 둥글게 왜곡 */
-            border-radius: 50%; 
-            position: relative;
-            z-index: 1;
-        }
-
-        /* 3. 물리적인 브라운관 필터 (주사선 + 강한 비네팅) */
-        .overlay {
+        /* 화면 곡면 효과 (어안 렌즈) */
+        .tv-screen::before {
+            content: "";
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: 
-                /* 촘촘한 가로줄 */
-                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%),
-                /* 모서리를 검게 태우는 강한 곡면 효과 */
-                radial-gradient(circle, transparent 35%, rgba(0,0,0,0.9) 100%);
-            background-size: 100% 4px, cover;
+            top: -10%;
+            left: -10%;
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 80%, #000 100%);
             z-index: 10;
+            pointer-events: none; /* 클릭 방지 */
+        }
+
+        /* 배경 이미지 및 효과 */
+        .tv-content {
+            width: 100%;
+            height: 100%;
+            background-image: url('skeleton_fairy.png'); /* 이미지 경로 수정 */
+            background-size: 100% 100%; /* 화면에 맞게 늘림 */
+            filter: blur(1.5px) contrast(1.1) brightness(0.9); /* 흐릿하고 거친 화질 재현 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            transform: scale(1.15); /* 어안 왜곡으로 인해 작아진 부분을 보정 */
+            transform-origin: center;
+        }
+
+        /* 화면 스캔라인 효과 */
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(0,0,0,0.05) 1.5%,
+                transparent 3%
+            );
+            z-index: 5;
             pointer-events: none;
         }
 
-        /* 로딩 UI 요소 - 이미지 느낌으로 투박하게 배치 */
-        .main-img-area {
-            width: 300px;
-            height: 300px;
-            background: #2c3e50; /* 이미지 대신 들어갈 공간 */
-            border: 2px solid #555;
-            margin-bottom: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #444;
-            font-weight: bold;
-            transform: scale(1.2); /* 렌즈 효과 강조를 위해 확대 */
-        }
-
-        .loading-bar-wrap {
-            width: 50%;
-            height: 10px;
-            background: #000;
-            border: 1px solid #333;
-            padding: 2px;
-        }
-
-        .bar-fill {
-            width: 45%;
+        /* 화면 노이즈/노이즈 오버레이 */
+        .static {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
-            background: #f1c40f; /* 스타 특유의 노란색 */
-            box-shadow: 0 0 15px rgba(241, 196, 15, 0.5);
-            animation: sc-load 8s infinite steps(10);
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkYGDgA8L///8zMDD4wH//AAAFCQX8z5X4ZzAAAAABJRU5ErkJggg=='); /* 아주 작고 투명한 노이즈 패턴 */
+            opacity: 0.1;
+            z-index: 4;
+            pointer-events: none;
+            animation: staticNoise 0.5s infinite;
         }
 
-        /* 상단 전압 떨림 효과 */
-        @keyframes flicker {
-            0% { opacity: 0.98; transform: skewX(0deg); }
-            5% { opacity: 0.95; transform: skewX(0.1deg); }
-            10% { opacity: 0.99; }
-            100% { opacity: 1; }
+        @keyframes staticNoise {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(2px, 2px); }
         }
-        .screen-content { animation: flicker 0.1s infinite; }
 
-        @keyframes sc-load {
-            0% { width: 0%; }
-            100% { width: 100%; }
-        }
+        /* 이미지 요소에 대한 시각적 세부 사항 주석 (코드 구현 아님)
+           주석: 해골은 핑크색 날개와 파란색/흰색 투투를 착용.
+           주석: 해골은 왼손에 별 모양 지팡이를 들고 있음.
+           주석: 배경은 화성의 표면과 유사한 황갈색 모래와 바위.
+           주석: 오른쪽 다리는 움직임을 표현하기 위해 흐릿함.
+        */
+        
     </style>
 </head>
 <body>
 
-<div class="crt-container">
-    <!-- 화면을 덮는 유리 왜곡/필터 레이어 -->
-    <div class="overlay"></div>
-    
-    <!-- 실제 내용물이 들어가는 둥근 레이어 -->
-    <div class="screen-content">
-        <div class="main-img-area">
-            [ 2001 IMAGE ]
-        </div>
-        
-        <div class="loading-bar-wrap">
-            <div class="bar-fill"></div>
-        </div>
-        
-        <p style="color: #f1c40f; font-size: 12px; margin-top: 15px; letter-spacing: 2px;">
-            MAP LOADING...
-        </p>
+<div class="tv-bezel">
+    <div class="tv-screen">
+        <div class="tv-content"></div>
+        <div class="scanlines"></div>
+        <div class="static"></div>
     </div>
 </div>
 
