@@ -1,189 +1,262 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>Perfect Ratio CRT Portfolio</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&display=swap');
-        body { 
-            background: #050505; 
-            margin: 0; 
-            overflow: hidden; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-        }
-        /* 4:3 비율 강제 고정 및 깔끔한 테두리 */
-        #container { 
-            position: relative; 
-            width: 80vh; /* 높이에 맞춘 너비 설정 (4:3) */
-            height: 60vh; 
-            box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 20px rgba(255,255,255,0.05);
-            background: #000;
-        }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 20px; }
-    </style>
-</head>
-<body>
+<meta charset="UTF-8">
+<title>CRT Portfolio FIXED</title>
 
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&display=swap');
+
+body {
+    margin:0;
+    background:#050505;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+/* 4:3 유지 */
+#container{
+    width:80vh;
+    height:60vh;
+    background:#000;
+    box-shadow:0 0 80px #000, 0 0 20px rgba(255,255,255,0.05);
+    position:relative;
+}
+
+/* 내부 해상도는 고정, 화면만 확대 */
+canvas{
+    width:100%;
+    height:100%;
+    display:block;
+}
+</style>
+</head>
+
+<body>
 <div id="container">
     <canvas id="outCanvas"></canvas>
     <canvas id="bufferCanvas" style="display:none;"></canvas>
 </div>
 
 <script>
+const WIDTH = 800;
+const HEIGHT = 600;
+
 const outCanvas = document.getElementById("outCanvas");
 const bufferCanvas = document.getElementById("bufferCanvas");
+
+outCanvas.width = WIDTH;
+outCanvas.height = HEIGHT;
+
+bufferCanvas.width = WIDTH;
+bufferCanvas.height = HEIGHT;
+
 const bCtx = bufferCanvas.getContext("2d");
-bufferCanvas.width = 800;
-bufferCanvas.height = 600;
 
-let mouseX = 0, mouseY = 0;
-let currentMode = "TITLE";
-const menuItems = ["GAME START", "PROJECT DATA", "ABILITY", "SYSTEM OFF"];
+/* =========================
+   입력
+========================= */
+let mouseX=0, mouseY=0;
+let currentMode="TITLE";
 
-outCanvas.addEventListener('mousemove', (e) => {
+const menuItems = ["GAME START","PROJECT DATA","ABILITY","SYSTEM OFF"];
+
+outCanvas.addEventListener("mousemove",(e)=>{
     const rect = outCanvas.getBoundingClientRect();
-    mouseX = (e.clientX - rect.left) * (800 / rect.width);
-    mouseY = (e.clientY - rect.top) * (600 / rect.height);
+    mouseX = (e.clientX - rect.left) * (WIDTH / rect.width);
+    mouseY = (e.clientY - rect.top) * (HEIGHT / rect.height);
 });
 
-outCanvas.addEventListener('click', () => {
-    menuItems.forEach((item, i) => {
-        const y = 350 + i * 55;
-        if (mouseX > 250 && mouseX < 550 && mouseY > y - 30 && mouseY < y + 20) {
-            currentMode = item;
+outCanvas.addEventListener("click",()=>{
+    if(currentMode !== "TITLE"){
+        currentMode="TITLE";
+        return;
+    }
+
+    menuItems.forEach((item,i)=>{
+        const y = 350 + i*55;
+        if(mouseX>250 && mouseX<550 && mouseY>y-30 && mouseY<y+20){
+            currentMode=item;
         }
     });
 });
 
-function drawBuffer() {
-    bCtx.fillStyle = "#0c0c16";
-    bCtx.fillRect(0, 0, 800, 600);
+/* =========================
+   2D UI 렌더
+========================= */
+function drawBuffer(){
 
-    if (currentMode === "TITLE") {
-        // 게임 타이틀 느낌의 텍스트 배치
-        bCtx.textAlign = "center";
-        bCtx.fillStyle = "#fff";
-        bCtx.font = "bold 70px 'Nanum Gothic Coding'";
-        bCtx.fillText("MISSION: POSS", 400, 180);
-        
-        bCtx.font = "14px 'Nanum Gothic Coding'";
-        bCtx.fillStyle = "#555588";
-        bCtx.fillText("INSERT COIN OR SELECT MENU", 400, 230);
+    bCtx.fillStyle="#0c0c16";
+    bCtx.fillRect(0,0,WIDTH,HEIGHT);
 
-        menuItems.forEach((item, i) => {
-            const y = 350 + i * 55;
-            const isHover = mouseX > 250 && mouseX < 550 && mouseY > y - 30 && mouseY < y + 20;
-            
-            if (isHover) {
-                bCtx.fillStyle = "rgba(255, 255, 255, 0.9)";
-                bCtx.fillRect(250, y - 35, 300, 45);
-                bCtx.fillStyle = "#000";
-                bCtx.font = "bold 22px 'Nanum Gothic Coding'";
-                bCtx.fillText("> " + item, 400, y - 3);
-            } else {
-                bCtx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-                bCtx.lineWidth = 1;
-                bCtx.strokeRect(250, y - 35, 300, 45);
-                bCtx.fillStyle = "#888";
-                bCtx.font = "22px 'Nanum Gothic Coding'";
-                bCtx.fillText(item, 400, y - 3);
+    if(currentMode==="TITLE"){
+
+        bCtx.textAlign="center";
+
+        bCtx.fillStyle="#fff";
+        bCtx.font="bold 70px 'Nanum Gothic Coding'";
+        bCtx.fillText("MISSION: POSS",400,180);
+
+        bCtx.fillStyle="#555588";
+        bCtx.font="14px 'Nanum Gothic Coding'";
+        bCtx.fillText("INSERT COIN OR SELECT MENU",400,230);
+
+        menuItems.forEach((item,i)=>{
+            const y = 350 + i*55;
+            const hover = mouseX>250 && mouseX<550 && mouseY>y-30 && mouseY<y+20;
+
+            if(hover){
+                bCtx.fillStyle="white";
+                bCtx.fillRect(250,y-35,300,45);
+
+                bCtx.fillStyle="#000";
+                bCtx.font="bold 22px 'Nanum Gothic Coding'";
+                bCtx.fillText("> "+item,400,y-3);
+
+            }else{
+                bCtx.strokeStyle="rgba(255,255,255,0.3)";
+                bCtx.strokeRect(250,y-35,300,45);
+
+                bCtx.fillStyle="#888";
+                bCtx.font="22px 'Nanum Gothic Coding'";
+                bCtx.fillText(item,400,y-3);
             }
         });
-    } else {
-        bCtx.fillStyle = "#fff";
-        bCtx.font = "30px 'Nanum Gothic Coding'";
-        bCtx.textAlign = "center";
-        bCtx.fillText("LOADING [" + currentMode + "]...", 400, 300);
-        bCtx.font = "16px 'Nanum Gothic Coding'";
-        bCtx.fillText("CLICK TO RETURN TO TITLE", 400, 350);
-        outCanvas.onclick = () => { currentMode = "TITLE"; outCanvas.onclick = null; };
+
+    }else{
+        bCtx.fillStyle="#fff";
+        bCtx.textAlign="center";
+
+        bCtx.font="30px 'Nanum Gothic Coding'";
+        bCtx.fillText("LOADING ["+currentMode+"]...",400,300);
+
+        bCtx.font="16px 'Nanum Gothic Coding'";
+        bCtx.fillText("CLICK TO RETURN",400,350);
     }
 }
 
-const gl = outCanvas.getContext("webgl");
+/* =========================
+   WebGL
+========================= */
+const gl = outCanvas.getContext("webgl") || outCanvas.getContext("experimental-webgl");
+
+if(!gl){
+    alert("WebGL 안됨");
+}
+
+/* Vertex */
 const vShader = gl.createShader(gl.VERTEX_SHADER);
-gl.shaderSource(vShader, `attribute vec2 p;varying vec2 v;void main(){v=(p+1.)/2.;v.y=1.-v.y;gl_Position=vec4(p,0,1);}`);
+gl.shaderSource(vShader,`
+attribute vec2 p;
+varying vec2 v;
+void main(){
+    v=(p+1.)/2.;
+    v.y=1.-v.y;
+    gl_Position=vec4(p,0,1);
+}`);
 gl.compileShader(vShader);
 
+/* Fragment (CRT 핵심) */
 const fShader = gl.createShader(gl.FRAGMENT_SHADER);
-gl.shaderSource(fShader, `
-    precision mediump float;
-    varying vec2 v;
-    uniform sampler2D t;
-    uniform float time;
+gl.shaderSource(fShader,`
+precision mediump float;
 
-    // 왜곡 수식 최적화 (중앙은 평평하고 끝으로 갈수록 휘게)
-    vec2 scanDistort(vec2 uv) {
-        uv = uv * 2.0 - 1.0;
-        vec2 offset = abs(uv.yx) / vec2(6.0, 4.0); // 가로세로 왜곡 비율 분리
-        uv = uv + uv * offset * offset;
-        return uv * 0.5 + 0.5;
+varying vec2 v;
+uniform sampler2D t;
+uniform float time;
+
+/* 곡면 CRT 왜곡 */
+vec2 distort(vec2 uv){
+    uv = uv*2.0-1.0;
+    float d = dot(uv,uv);
+    uv *= 1.0 + d*0.25;
+    return uv*0.5+0.5;
+}
+
+void main(){
+
+    vec2 u = distort(v);
+
+    if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0){
+        gl_FragColor=vec4(0,0,0,1);
+        return;
     }
 
-    void main() {
-        vec2 u = scanDistort(v);
-        
-        // 화면 밖 영역 처리 (검정색)
-        if(u.x < 0.0 || u.x > 1.0 || u.y < 0.0 || u.y > 1.0) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-            return;
-        }
+    /* RGB 분리 */
+    float r = texture2D(t, u + vec2(0.003,0.0)).r;
+    float g = texture2D(t, u).g;
+    float b = texture2D(t, u - vec2(0.003,0.0)).b;
 
-        // RGB 도트 배열 느낌 (Aperture Grille)
-        vec3 c;
-        float r = texture2D(t, u + vec2(0.0015, 0.0)).r;
-        float g = texture2D(t, u).g;
-        float b = texture2D(t, u - vec2(0.0015, 0.0)).b;
-        
-        // 주사선 효과 강도 조절
-        float scanline = sin(u.y * 800.0) * 0.08;
-        c = vec3(r, g, b) - scanline;
-        
-        // 아주 미세한 지지직거림
-        float noise = fract(sin(dot(u + time, vec2(12.9898, 78.233))) * 43758.5453) * 0.05;
-        c += noise;
+    vec3 col = vec3(r,g,b);
 
-        // 비네팅 (가장자리 어둡게)
-        float vignette = 1.0 - length(v - 0.5) * 1.3;
-        gl_FragColor = vec4(c * vignette, 1.0);
-    }
-`);
+    /* 스캔라인 */
+    float scan = sin(u.y * 600.0) * 0.15;
+    col -= scan;
+
+    /* 노이즈 */
+    float noise = fract(sin(dot(u+time, vec2(12.9898,78.233))) * 43758.5453);
+    col += noise * 0.05;
+
+    /* 비네팅 */
+    float vig = 1.0 - length(v-0.5)*1.3;
+    col *= vig;
+
+    gl_FragColor = vec4(col,1.0);
+}`);
 gl.compileShader(fShader);
 
+/* 프로그램 */
 const prog = gl.createProgram();
-gl.attachShader(prog, vShader); gl.attachShader(prog, fShader);
-gl.linkProgram(prog); gl.useProgram(prog);
+gl.attachShader(prog,vShader);
+gl.attachShader(prog,fShader);
+gl.linkProgram(prog);
+gl.useProgram(prog);
 
+/* 풀스크린 quad */
 const buf = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
-const pLoc = gl.getAttribLocation(prog, "p");
-gl.enableVertexAttribArray(pLoc); gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([
+-1,-1, 1,-1, -1,1,
+-1,1, 1,-1, 1,1
+]),gl.STATIC_DRAW);
 
+const loc = gl.getAttribLocation(prog,"p");
+gl.enableVertexAttribArray(loc);
+gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+
+/* 텍스처 */
 const tex = gl.createTexture();
-const tLoc = gl.getUniformLocation(prog, "time");
+gl.bindTexture(gl.TEXTURE_2D,tex);
 
-function loop(t) {
-    outCanvas.width = outCanvas.clientWidth;
-    outCanvas.height = outCanvas.clientHeight;
-    gl.viewport(0, 0, outCanvas.width, outCanvas.height);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+
+const timeLoc = gl.getUniformLocation(prog,"time");
+
+/* =========================
+   루프
+========================= */
+function loop(t){
 
     drawBuffer();
 
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bufferCanvas);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    
-    gl.uniform1f(tLoc, t/1000);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.viewport(0,0,WIDTH,HEIGHT);
+
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bufferCanvas);
+
+    gl.uniform1f(timeLoc,t*0.001);
+
+    gl.drawArrays(gl.TRIANGLES,0,6);
+
     requestAnimationFrame(loop);
 }
+
 requestAnimationFrame(loop);
+
 </script>
 </body>
 </html>
