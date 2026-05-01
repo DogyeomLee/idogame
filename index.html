@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>CRT 3D GAME UI FINAL</title>
+<title>CRT ULTIMATE</title>
 
 <style>
 body{
@@ -16,7 +16,6 @@ body{
     perspective:1200px;
 }
 
-/* 3D 배경 */
 #bg{
     position:fixed;
     width:200%;
@@ -27,14 +26,12 @@ body{
     transform:translateZ(-500px);
 }
 
-/* 화면 */
 #wrap{
     aspect-ratio:4/3;
     width:95vw;
     max-width:calc(95vh * 4/3);
     max-height:95vh;
     transform-style:preserve-3d;
-    transition:transform 0.15s ease-out;
 }
 
 #screen{
@@ -44,42 +41,29 @@ body{
     border-radius:18px;
     overflow:hidden;
     background:black;
-
-    box-shadow:
-        0 0 40px black,
-        inset 0 0 20px black;
+    box-shadow:0 0 40px black, inset 0 0 20px black;
 }
 
-/* 캔버스 */
 canvas{
     position:absolute;
     width:100%;
     height:100%;
 }
 
-/* 유리 반사 */
 #glass{
     position:absolute;
     width:100%;
     height:100%;
     pointer-events:none;
-    background:linear-gradient(
-        120deg,
-        rgba(255,255,255,0.08),
-        rgba(255,255,255,0.02),
-        rgba(0,0,0,0.2)
-    );
+    background:linear-gradient(120deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02),rgba(0,0,0,0.2));
 }
 
-/* 곡면 느낌 */
 #curve{
     position:absolute;
     width:100%;
     height:100%;
     pointer-events:none;
-    box-shadow:
-        inset 0 0 60px rgba(0,0,0,0.9),
-        inset 0 0 120px rgba(0,0,0,0.5);
+    box-shadow:inset 0 0 80px rgba(0,0,0,0.9), inset 0 0 150px rgba(0,0,0,0.5);
 }
 </style>
 </head>
@@ -89,13 +73,12 @@ canvas{
 <div id="bg"></div>
 
 <div id="wrap">
-    <div id="screen">
-        <canvas id="out"></canvas>
-        <canvas id="buf" style="display:none;"></canvas>
-
-        <div id="glass"></div>
-        <div id="curve"></div>
-    </div>
+<div id="screen">
+<canvas id="out"></canvas>
+<canvas id="buf" style="display:none;"></canvas>
+<div id="glass"></div>
+<div id="curve"></div>
+</div>
 </div>
 
 <script>
@@ -112,7 +95,8 @@ const ctx=buf.getContext("2d");
 
 /* 상태 */
 let crt=true;
-let power=true;
+let power=1;
+let targetPower=1;
 let mode="TITLE";
 
 const menu=["GAME START","PROJECT DATA","ABILITY","SYSTEM OFF"];
@@ -126,24 +110,18 @@ out.addEventListener("mousemove",(e)=>{
     my=(e.clientY-r.top)*(H/r.height);
 });
 
-/* 3D 움직임 */
+/* 3D */
 const wrap=document.getElementById("wrap");
 window.addEventListener("mousemove",(e)=>{
     const x=(e.clientX/window.innerWidth-0.5)*12;
     const y=(e.clientY/window.innerHeight-0.5)*12;
-
     wrap.style.transform=`rotateY(${x}deg) rotateX(${-y}deg)`;
-
     bg.style.transform=`translateZ(-500px) translate(${x*6}px,${y*6}px)`;
 });
 
 /* 클릭 */
 out.addEventListener("click",()=>{
-    if(mode!=="TITLE"){
-        mode="TITLE";
-        return;
-    }
-
+    if(mode!=="TITLE"){ mode="TITLE"; return; }
     menu.forEach((m,i)=>{
         const y=330+i*50;
         if(mx>250&&mx<550&&my>y-30&&my<y+20){
@@ -156,21 +134,19 @@ out.addEventListener("click",()=>{
 window.addEventListener("keydown",(e)=>{
     const k=e.key.toLowerCase();
     if(k==="c") crt=!crt;
-    if(k==="p") power=!power;
+    if(k==="p") targetPower = targetPower ? 0 : 1;
 });
 
 /* UI */
 function draw(){
-
     ctx.fillStyle="#0c0c16";
     ctx.fillRect(0,0,W,H);
 
-    if(!power) return;
+    if(power<0.05) return;
 
     ctx.textAlign="center";
 
     if(mode==="TITLE"){
-
         ctx.fillStyle="#fff";
         ctx.font="bold 70px monospace";
         ctx.fillText("MISSION: POSS",400,180);
@@ -186,35 +162,26 @@ function draw(){
             if(hover){
                 ctx.fillStyle="white";
                 ctx.fillRect(250,y-35,300,40);
-
                 ctx.fillStyle="black";
-                ctx.font="bold 20px monospace";
                 ctx.fillText("> "+m,400,y-5);
             }else{
                 ctx.strokeStyle="rgba(255,255,255,0.3)";
                 ctx.strokeRect(250,y-35,300,40);
-
                 ctx.fillStyle="#aaa";
-                ctx.font="20px monospace";
                 ctx.fillText(m,400,y-5);
             }
         });
-
     }else{
         ctx.fillStyle="#fff";
         ctx.font="30px monospace";
         ctx.fillText("LOADING ["+mode+"]",400,300);
-
-        ctx.font="16px monospace";
-        ctx.fillText("CLICK TO RETURN",400,340);
     }
 }
 
 /* WebGL */
 const gl=out.getContext("webgl");
-if(!gl) alert("WebGL 안됨");
 
-/* vertex */
+/* shaders */
 const vs=gl.createShader(gl.VERTEX_SHADER);
 gl.shaderSource(vs,`
 attribute vec2 p;
@@ -226,7 +193,6 @@ gl_Position=vec4(p,0,1);
 }`);
 gl.compileShader(vs);
 
-/* fragment */
 const fs=gl.createShader(gl.FRAGMENT_SHADER);
 gl.shaderSource(fs,`
 precision mediump float;
@@ -234,44 +200,82 @@ varying vec2 v;
 uniform sampler2D t;
 uniform float time;
 uniform float crt;
-
-vec2 distort(vec2 uv){
-    uv=uv*2.0-1.0;
-    float d=dot(uv,uv);
-    uv*=1.0 + d*0.35;
-    return uv*0.5+0.5;
-}
+uniform float power;
 
 float rand(vec2 c){
-    return fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453);
+return fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453);
+}
+
+vec2 distort(vec2 uv){
+uv=uv*2.0-1.0;
+float d=dot(uv,uv);
+uv*=1.0 + d*0.35;
+return uv*0.5+0.5;
 }
 
 void main(){
 
-    vec2 u = crt>0.5 ? distort(v) : v;
+vec2 u = crt>0.5 ? distort(v) : v;
 
-    if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0){
-        gl_FragColor=vec4(0,0,0,1);
-        return;
-    }
+/* power mask */
+float mask = smoothstep(power-0.05,power+0.05,abs(v.y-0.5));
+mask *= smoothstep(power-0.05,power+0.05,abs(v.x-0.5));
 
-    vec3 col;
+if(power<0.01){
+    gl_FragColor=vec4(0,0,0,1);
+    return;
+}
 
-    if(crt>0.5){
-        float r=texture2D(t,u+vec2(0.003,0)).r;
-        float g=texture2D(t,u).g;
-        float b=texture2D(t,u-vec2(0.003,0)).b;
+if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0){
+    gl_FragColor=vec4(0,0,0,1);
+    return;
+}
 
-        col=vec3(r,g,b);
+/* VHS glitch */
+u.x += step(0.97,rand(vec2(time,v.y)))*0.02;
 
-        col -= sin(u.y*700.0)*0.15;
-        col += rand(u+time)*0.06;
-        col *= 1.0 - length(v-0.5)*1.3;
-    }else{
-        col=texture2D(t,u).rgb;
-    }
+vec3 col;
 
-    gl_FragColor=vec4(col,1.0);
+/* Chromatic Bleed */
+float r = texture2D(t,u+vec2(0.004,0)).r*0.6 +
+          texture2D(t,u+vec2(0.008,0)).r*0.3 +
+          texture2D(t,u+vec2(0.012,0)).r*0.1;
+
+float g = texture2D(t,u).g*0.7 +
+          texture2D(t,u+vec2(0.003,0)).g*0.3;
+
+float b = texture2D(t,u-vec2(0.002,0)).b*0.85 +
+          texture2D(t,u-vec2(0.004,0)).b*0.15;
+
+col = vec3(r,g,b);
+
+/* scanline */
+col -= sin(u.y*700.0)*0.15;
+
+/* noise */
+col += rand(u+time)*0.05;
+
+/* bloom */
+vec3 bloom = (
+texture2D(t,u+vec2(0.002,0)).rgb +
+texture2D(t,u-vec2(0.002,0)).rgb +
+texture2D(t,u+vec2(0,0.002)).rgb +
+texture2D(t,u-vec2(0,0.002)).rgb
+)/4.0;
+
+float bright = max(max(col.r,col.g),col.b);
+col += bloom * bright * 0.5;
+
+/* afterimage */
+col += texture2D(t,u+0.002).rgb * 0.08;
+
+/* vignette */
+col *= 1.0 - length(v-0.5)*1.3;
+
+/* power */
+col *= mask;
+
+gl_FragColor=vec4(col,1.0);
 }`);
 gl.compileShader(fs);
 
@@ -303,23 +307,28 @@ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 
 const timeLoc=gl.getUniformLocation(prog,"time");
 const crtLoc=gl.getUniformLocation(prog,"crt");
+const powerLoc=gl.getUniformLocation(prog,"power");
 
 /* loop */
 function loop(t){
 
-    draw();
+draw();
 
-    gl.viewport(0,0,W,H);
+/* power lerp */
+power += (targetPower - power)*0.08;
 
-    gl.bindTexture(gl.TEXTURE_2D,tex);
-    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,buf);
+gl.viewport(0,0,W,H);
 
-    gl.uniform1f(timeLoc,t*0.001);
-    gl.uniform1f(crtLoc, crt?1:0);
+gl.bindTexture(gl.TEXTURE_2D,tex);
+gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,buf);
 
-    gl.drawArrays(gl.TRIANGLES,0,6);
+gl.uniform1f(timeLoc,t*0.001);
+gl.uniform1f(crtLoc,crt?1:0);
+gl.uniform1f(powerLoc,power);
 
-    requestAnimationFrame(loop);
+gl.drawArrays(gl.TRIANGLES,0,6);
+
+requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 </script>
