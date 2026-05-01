@@ -2,51 +2,99 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>CRT GAME UI</title>
+<title>CRT 3D GAME UI FINAL</title>
 
 <style>
 body{
     margin:0;
     background:#05060a;
     height:100vh;
+    overflow:hidden;
     display:flex;
     justify-content:center;
     align-items:center;
-    overflow:hidden;
+    perspective:1200px;
 }
 
-/* 화면 크게 */
+/* 3D 배경 */
+#bg{
+    position:fixed;
+    width:200%;
+    height:200%;
+    background:
+        radial-gradient(circle,#0a0d18 0%, #020204 70%),
+        repeating-linear-gradient(rgba(255,255,255,0.02) 0 1px, transparent 1px 60px);
+    transform:translateZ(-500px);
+}
+
+/* 화면 */
 #wrap{
     aspect-ratio:4/3;
     width:95vw;
     max-width:calc(95vh * 4/3);
     max-height:95vh;
+    transform-style:preserve-3d;
+    transition:transform 0.15s ease-out;
 }
 
-/* CRT 화면 */
 #screen{
+    position:relative;
     width:100%;
     height:100%;
-    background:black;
-    border-radius:16px;
+    border-radius:18px;
     overflow:hidden;
-    box-shadow:0 0 40px black, inset 0 0 20px black;
+    background:black;
+
+    box-shadow:
+        0 0 40px black,
+        inset 0 0 20px black;
 }
 
+/* 캔버스 */
 canvas{
+    position:absolute;
     width:100%;
     height:100%;
-    display:block;
+}
+
+/* 유리 반사 */
+#glass{
+    position:absolute;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    background:linear-gradient(
+        120deg,
+        rgba(255,255,255,0.08),
+        rgba(255,255,255,0.02),
+        rgba(0,0,0,0.2)
+    );
+}
+
+/* 곡면 느낌 */
+#curve{
+    position:absolute;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    box-shadow:
+        inset 0 0 60px rgba(0,0,0,0.9),
+        inset 0 0 120px rgba(0,0,0,0.5);
 }
 </style>
 </head>
 
 <body>
 
+<div id="bg"></div>
+
 <div id="wrap">
     <div id="screen">
         <canvas id="out"></canvas>
         <canvas id="buf" style="display:none;"></canvas>
+
+        <div id="glass"></div>
+        <div id="curve"></div>
     </div>
 </div>
 
@@ -55,6 +103,7 @@ const W=800,H=600;
 
 const out=document.getElementById("out");
 const buf=document.getElementById("buf");
+const bg=document.getElementById("bg");
 
 out.width=W; out.height=H;
 buf.width=W; buf.height=H;
@@ -77,6 +126,17 @@ out.addEventListener("mousemove",(e)=>{
     my=(e.clientY-r.top)*(H/r.height);
 });
 
+/* 3D 움직임 */
+const wrap=document.getElementById("wrap");
+window.addEventListener("mousemove",(e)=>{
+    const x=(e.clientX/window.innerWidth-0.5)*12;
+    const y=(e.clientY/window.innerHeight-0.5)*12;
+
+    wrap.style.transform=`rotateY(${x}deg) rotateX(${-y}deg)`;
+
+    bg.style.transform=`translateZ(-500px) translate(${x*6}px,${y*6}px)`;
+});
+
 /* 클릭 */
 out.addEventListener("click",()=>{
     if(mode!=="TITLE"){
@@ -92,10 +152,9 @@ out.addEventListener("click",()=>{
     });
 });
 
-/* 키 입력 (확실히 동작하게) */
+/* 키 */
 window.addEventListener("keydown",(e)=>{
     const k=e.key.toLowerCase();
-
     if(k==="c") crt=!crt;
     if(k==="p") power=!power;
 });
@@ -176,7 +235,6 @@ uniform sampler2D t;
 uniform float time;
 uniform float crt;
 
-/* 곡면 */
 vec2 distort(vec2 uv){
     uv=uv*2.0-1.0;
     float d=dot(uv,uv);
@@ -200,7 +258,6 @@ void main(){
     vec3 col;
 
     if(crt>0.5){
-
         float r=texture2D(t,u+vec2(0.003,0)).r;
         float g=texture2D(t,u).g;
         float b=texture2D(t,u-vec2(0.003,0)).b;
@@ -210,7 +267,6 @@ void main(){
         col -= sin(u.y*700.0)*0.15;
         col += rand(u+time)*0.06;
         col *= 1.0 - length(v-0.5)*1.3;
-
     }else{
         col=texture2D(t,u).rgb;
     }
@@ -265,7 +321,6 @@ function loop(t){
 
     requestAnimationFrame(loop);
 }
-
 requestAnimationFrame(loop);
 </script>
 
