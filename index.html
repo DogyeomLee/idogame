@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>WebGL CRT Shader - Full Center</title>
+    <title>WebGL CRT Shader - Enhanced Noise & Sound</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@700&display=swap');
         
         body { 
-            background: #050505; 
+            background: #000; 
             margin: 0; 
             display: flex; 
             justify-content: center; 
@@ -19,24 +19,32 @@
 
         #wrapper { 
             position: relative; 
-            /* 화면 크기에 맞춰 조절 가능한 영역 */
-            width: 90vh; 
-            height: 67.5vh; 
-            max-width: 1000px;
-            max-height: 750px;
+            /* 화면 크기 키움: 95vh로 확장 */
+            width: 125vh; 
+            height: 95vh; 
+            max-width: 98vw;
+            max-height: 98vh;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        /* 게임 데이터가 그려지는 실제 캔버스는 숨김 */
         #gameCanvas { display: none; }
 
-        /* 쉐이더가 출력되는 최종 캔버스 */
         #shaderCanvas { 
             width: 100%; 
             height: 100%; 
             display: block;
+            box-shadow: 0 0 100px rgba(0, 255, 0, 0.1); /* 미세한 광원 효과 */
+        }
+
+        /* 초기 안내 메시지 */
+        #clickMsg {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Nanum Gothic Coding';
+            pointer-events: none;
+            bottom: 20px;
         }
     </style>
 </head>
@@ -45,10 +53,48 @@
 <div id="wrapper">
     <canvas id="shaderCanvas"></canvas>
     <canvas id="gameCanvas"></canvas>
+    <div id="clickMsg">화면을 클릭하면 소리가 재생되고 페이지가 넘어갑니다.</div>
 </div>
 
 <script>
-/** 1. 2D 게임 캔버스 설정 **/
+/** 1. 사운드 생성 (Web Audio API) **/
+let audioCtx = null;
+let noiseNode = null;
+let gainNode = null;
+
+function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // 화이트 노이즈 생성
+    const bufferSize = 2 * audioCtx.sampleRate;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+
+    noiseNode = audioCtx.createBufferSource();
+    noiseNode.buffer = noiseBuffer;
+    noiseNode.loop = true;
+
+    gainNode = audioCtx.createGain();
+    // 치지직거리는 아주 작은 소리로 설정 (0.01 ~ 0.02)
+    gainNode.gain.value = 0.015; 
+
+    // 저역대를 깎아서 더 날카로운 치지직 소리로 만듦 (Highpass Filter)
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 1000;
+
+    noiseNode.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    noiseNode.start();
+}
+
+/** 2. 2D 게임 캔버스 설정 **/
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 canvas.width = 640; 
@@ -63,17 +109,15 @@ const data = [
 function drawUI() {
     ctx.fillStyle = "#050812"; 
     ctx.fillRect(0, 0, 640, 480);
-    
-    // 테두리
-    ctx.strokeStyle = "rgba(255,255,255,0.8)"; 
-    ctx.lineWidth = 6; 
-    ctx.strokeRect(40, 40, 560, 400);
+    ctx.strokeStyle = "rgba(0, 255, 100, 0.5)"; // 약간 초록빛 도는 테두리
+    ctx.lineWidth = 8; 
+    ctx.strokeRect(30, 30, 580, 420);
 
     const d = data[page];
-    ctx.fillStyle = "white";
-    ctx.font = "bold 32px 'Nanum Gothic Coding'";
+    ctx.fillStyle = "#00ff66"; // 레트로 그린 텍스트
+    ctx.font = "bold 34px 'Nanum Gothic Coding'";
     ctx.textAlign = "center";
-    ctx.fillText(d.title, 320, 95);
+    ctx.fillText(d.title, 320, 90);
 
     ctx.textAlign = "left";
     ctx.font = "28px 'Nanum Gothic Coding'";
@@ -85,23 +129,22 @@ function drawUI() {
         ctx.fillStyle = color; ctx.fillRect(160, y - 24, (val / 1000) * 380, 28);
         ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.strokeRect(160, y - 24, 380, 28);
     };
-    drawBar(230, d.hp, "#d32f2f"); 
-    drawBar(285, d.mp, "#1976d2");
+    drawBar(230, d.hp, "#ff3333"); 
+    drawBar(285, d.mp, "#3366ff");
 
     d.stats.forEach((s, i) => {
         let x = (i % 2 === 0) ? 90 : 350; 
         let y = 360 + (Math.floor(i / 2) * 60);
-        ctx.fillStyle = "white";
-        ctx.font = "22px 'Nanum Gothic Coding'";
+        ctx.fillStyle = "#fff";
+        ctx.font = "24px 'Nanum Gothic Coding'";
         ctx.fillText(`${s[0]}: ${s[1]}`, x, y);
     });
 }
 
-/** 2. WebGL 쉐이더 설정 (중앙 정렬 및 크기 보정) **/
+/** 3. WebGL 쉐이더 설정 **/
 const sCanvas = document.getElementById("shaderCanvas");
 const gl = sCanvas.getContext("webgl");
 
-// 쉐이더 해상도를 캔버스 표시 크기와 일치시킴
 function resizeShaderCanvas() {
     const displayWidth = sCanvas.clientWidth;
     const displayHeight = sCanvas.clientHeight;
@@ -129,8 +172,8 @@ const fragmentSource = `
     uniform float uTime;
 
     vec2 curve(vec2 uv) {
-        uv = (uv - 0.5) * 2.0;
-        uv *= 1.05; 
+        uv = (uv - 0.5) * 2.3; // 곡률 약간 강화
+        uv *= 1.1; 
         uv.x *= 1.0 + pow((abs(uv.y) / 4.0), 2.0);
         uv.y *= 1.0 + pow((abs(uv.x) / 3.0), 2.0);
         uv = (uv / 2.0) + 0.5;
@@ -145,25 +188,24 @@ const fragmentSource = `
             return;
         }
 
-        // 색수차 (RGB 분리)
-        float r = texture2D(uTexture, uv + vec2(0.0015, 0.0)).r;
+        // 색수차 강화
+        float r = texture2D(uTexture, uv + vec2(0.002, 0.0)).r;
         float g = texture2D(uTexture, uv).g;
-        float b = texture2D(uTexture, uv - vec2(0.0015, 0.0)).b;
-        
+        float b = texture2D(uTexture, uv - vec2(0.002, 0.0)).b;
         vec3 color = vec3(r, g, b);
 
-        // 촘촘한 주사선
-        float scanline = sin(uv.y * 600.0) * 0.06;
+        // 주사선
+        float scanline = sin(uv.y * 800.0) * 0.1;
         color -= scanline;
 
-        // 지글거리는 노이즈
+        // **강화된 지글거리는 노이즈**
         float mTime = mod(uTime, 1000.0);
-        float noise = (fract(sin(dot(uv, vec2(12.9898, 78.233) * mTime)) * 43758.5453) - 0.5) * 0.08;
-        color += noise;
+        float staticNoise = (fract(sin(dot(uv + mTime*0.01, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.25;
+        color += staticNoise;
 
-        // 비네팅 (이미지와 유사하게 강하게)
+        // 비네팅
         float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
-        color *= pow(16.0 * vignette, 0.3);
+        color *= pow(16.0 * vignette, 0.5);
 
         gl_FragColor = vec4(color, 1.0);
     }
@@ -208,7 +250,13 @@ function render() {
     requestAnimationFrame(render);
 }
 
-window.addEventListener('click', () => { page = (page + 1) % data.length; });
+// 클릭 이벤트: 페이지 전환 + 오디오 시작
+window.addEventListener('click', () => { 
+    initAudio();
+    page = (page + 1) % data.length; 
+    document.getElementById('clickMsg').style.display = 'none';
+});
+
 render();
 </script>
 </body>
