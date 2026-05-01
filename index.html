@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>게임 하십시오</title>
+<title>CRT FIXED</title>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&display=swap');
@@ -18,7 +18,7 @@ body{
     perspective:1200px;
 }
 
-/* 3D 배경 */
+/* 배경 */
 #bg{
     position:fixed;
     width:200%;
@@ -49,32 +49,13 @@ body{
 
     box-shadow:
         0 0 40px rgba(0,0,0,1),
-        inset 0 0 20px rgba(0,0,0,0.8),
-        inset 0 0 2px rgba(255,255,255,0.1);
+        inset 0 0 20px rgba(0,0,0,0.8);
 }
 
 canvas{
     position:absolute;
     width:100%;
     height:100%;
-}
-
-#glass{
-    position:absolute;
-    width:100%;
-    height:100%;
-    pointer-events:none;
-    background:linear-gradient(120deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02),rgba(0,0,0,0.2));
-}
-
-#curve{
-    position:absolute;
-    width:100%;
-    height:100%;
-    pointer-events:none;
-    box-shadow:
-        inset 0 0 60px rgba(0,0,0,0.9),
-        inset 0 0 150px rgba(0,0,0,0.5);
 }
 </style>
 </head>
@@ -87,16 +68,15 @@ canvas{
     <div id="screen">
         <canvas id="out"></canvas>
         <canvas id="buf" style="display:none;"></canvas>
-        <div id="glass"></div>
-        <div id="curve"></div>
     </div>
 </div>
 
 <script>
-const W=800,H=600;
+const W=800, H=600;
 
 const out=document.getElementById("out");
 const buf=document.getElementById("buf");
+const bg=document.getElementById("bg"); // ✅ FIX
 
 out.width=W; out.height=H;
 buf.width=W; buf.height=H;
@@ -105,8 +85,7 @@ const ctx=buf.getContext("2d");
 
 /* 상태 */
 let crt=true;
-let power=true;
-let powerAnim=1; // 0~1
+let powerAnim=1;
 let targetPower=1;
 
 /* 입력 */
@@ -128,7 +107,6 @@ window.addEventListener("mousemove",e=>{
 
 /* UI */
 function draw(){
-
     ctx.fillStyle="#0c0c16";
     ctx.fillRect(0,0,W,H);
 
@@ -143,19 +121,33 @@ function draw(){
 }
 
 /* WebGL */
-const gl=out.getContext("webgl");
+const gl = out.getContext("webgl") || out.getContext("experimental-webgl");
 
+if(!gl){
+    alert("WebGL 지원 안됨");
+}
+
+/* shader 체크 */
+function checkShader(s){
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+        console.error(gl.getShaderInfoLog(s));
+    }
+}
+
+/* vertex */
 const vs=gl.createShader(gl.VERTEX_SHADER);
 gl.shaderSource(vs,`
 attribute vec2 p;
 varying vec2 v;
 void main(){
-v=(p+1.)/2.;
-v.y=1.-v.y;
-gl_Position=vec4(p,0,1);
+    v=(p+1.)/2.;
+    v.y=1.-v.y;
+    gl_Position=vec4(p,0,1);
 }`);
 gl.compileShader(vs);
+checkShader(vs);
 
+/* fragment (안정화 버전) */
 const fs=gl.createShader(gl.FRAGMENT_SHADER);
 gl.shaderSource(fs,`
 precision mediump float;
@@ -165,81 +157,60 @@ uniform float time;
 uniform float crt;
 uniform float power;
 
-/* CRT 곡면 */
-vec2 distort(vec2 uv){
-uv=uv*2.0-1.0;
-float d=dot(uv,uv);
-uv*=1.0+d*0.3;
-return uv*0.5+0.5;
-}
-
 float rand(vec2 co){
 return fract(sin(dot(co,vec2(12.9898,78.233)))*43758.5453);
 }
 
 void main(){
 
-vec2 u=v;
+    vec2 u = v;
 
-if(crt>0.5){
-    u=distort(v);
-}
+    /* power off */
+    if(power < 0.01){
+        gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+        return;
+    }
 
-/* 전원 애니메이션 */
-float mask = smoothstep(power-0.05,power+0.05,abs(v.y-0.5));
-mask *= smoothstep(power-0.05,power+0.05,abs(v.x-0.5));
+    vec3 col = texture2D(t, u).rgb;
 
-if(power<0.01){
-    gl_FragColor=vec4(0,0,0,1);
-    return;
-}
+    if(crt > 0.5){
 
-if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0){
-    gl_FragColor=vec4(0,0,0,1);
-    return;
-}
+        /* RGB */
+        float r = texture2D(t, u + vec2(0.002,0.0)).r;
+        float g = texture2D(t, u).g;
+        float b = texture2D(t, u - vec2(0.002,0.0)).b;
+        col = vec3(r,g,b);
 
-vec3 col;
+        /* scanline */
+        col -= sin(u.y * 600.0) * 0.12;
 
-/* VHS glitch */
-float glitch = step(0.95,rand(vec2(time, v.y))) * 0.1;
-u.x += glitch;
+        /* noise */
+        col += rand(u + time) * 0.04;
 
-/* RGB */
-if(crt>0.5){
-    float r=texture2D(t,u+vec2(0.003,0.0)).r;
-    float g=texture2D(t,u).g;
-    float b=texture2D(t,u-vec2(0.003,0.0)).b;
-    col=vec3(r,g,b);
+        /* vignette */
+        col *= 1.0 - length(v - 0.5) * 1.2;
+    }
 
-    col -= sin(u.y*700.0)*0.15;
-
-    float noise=rand(u+time)*0.05;
-    col+=noise;
-
-    col *= 1.0-length(v-0.5)*1.3;
-}else{
-    col=texture2D(t,u).rgb;
-}
-
-/* 잔상 */
-col += texture2D(t,u+0.002).rgb * 0.08;
-
-/* 전원 마스크 적용 */
-col *= mask;
-
-gl_FragColor=vec4(col,1.0);
+    gl_FragColor = vec4(col,1.0);
 }`);
 gl.compileShader(fs);
+checkShader(fs);
 
+/* program */
 const prog=gl.createProgram();
 gl.attachShader(prog,vs);
 gl.attachShader(prog,fs);
 gl.linkProgram(prog);
+
+if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){
+    console.error(gl.getProgramInfoLog(prog));
+}
+
 gl.useProgram(prog);
 
-const bufGL=gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER,bufGL);
+/* quad */
+const buffer=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
 gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([
 -1,-1,1,-1,-1,1,
 -1,1,1,-1,1,1
@@ -249,6 +220,7 @@ const loc=gl.getAttribLocation(prog,"p");
 gl.enableVertexAttribArray(loc);
 gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
 
+/* texture */
 const tex=gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D,tex);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
@@ -262,23 +234,22 @@ const powerLoc=gl.getUniformLocation(prog,"power");
 /* loop */
 function loop(t){
 
-draw();
+    draw();
 
-/* 전원 애니메이션 */
-powerAnim += (targetPower - powerAnim)*0.08;
+    powerAnim += (targetPower - powerAnim) * 0.08;
 
-gl.viewport(0,0,W,H);
+    gl.viewport(0,0,W,H);
 
-gl.bindTexture(gl.TEXTURE_2D,tex);
-gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,buf);
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,buf);
 
-gl.uniform1f(timeLoc,t*0.001);
-gl.uniform1f(crtLoc,crt?1:0);
-gl.uniform1f(powerLoc,powerAnim);
+    gl.uniform1f(timeLoc,t*0.001);
+    gl.uniform1f(crtLoc, crt ? 1 : 0);
+    gl.uniform1f(powerLoc, powerAnim);
 
-gl.drawArrays(gl.TRIANGLES,0,6);
+    gl.drawArrays(gl.TRIANGLES,0,6);
 
-requestAnimationFrame(loop);
+    requestAnimationFrame(loop);
 }
 
 requestAnimationFrame(loop);
