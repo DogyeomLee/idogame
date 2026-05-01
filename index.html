@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>진짜 CRT 볼록 왜곡</title>
+    <title>진짜 CRT 볼록 왜곡과 노이즈</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@700&display=swap');
 
         body {
-            background-color: #050505;
+            background-color: #020202;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -16,95 +16,93 @@
             overflow: hidden;
         }
 
-        /* [핵심] 화면의 굴곡을 만드는 외곽 틀 */
-        #crt-shell {
+        /* [핵심] 화면 전체에 볼록한 렌즈 효과 부여 */
+        .crt-container {
             position: relative;
-            width: 820px;
-            height: 620px;
+            width: 800px;
+            height: 600px;
+            /* 4방향 변을 볼록하게 만드는 곡률 */
+            border-radius: 50% / 10%; 
+            overflow: hidden;
             background: #000;
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 테두리 자체를 볼록하게 만드는 마스크 */
-            border-radius: 10% / 50%;
-            overflow: hidden;
+            box-shadow: 0 0 100px rgba(0,0,0,1);
         }
 
-        /* 내부 화면: 상하로도 볼록하게 만들기 위해 이중 구조 사용 */
-        #monitor-screen {
-            position: relative;
+        /* 내부 화면 레이어: 상하 곡률 추가 */
+        .screen {
             width: 100%;
             height: 100%;
+            position: relative;
             background: #08080c;
-            border-radius: 50% / 10%; /* 가로/세로 곡률 교차 적용 */
+            border-radius: 10% / 50%; /* 가로 세로 곡률 교차로 볼록함 극대화 */
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
-            box-shadow: inset 0 0 120px rgba(0,0,0,0.9);
         }
 
-        /* 1. 강한 가로 주사선 */
+        /* 1. 실제 이미지 같은 지지직거리는 노이즈 (Glitch) */
+        .glitch-noise {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_hz_sine_multi_tone_noise.png');
+            opacity: 0.15;
+            z-index: 20;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            animation: noise-move 0.1s steps(1) infinite;
+        }
+
+        @keyframes noise-move {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 10% 20%; }
+        }
+
+        /* 2. 주사선 (Scanlines) - 더 가늘고 촘촘하게 */
         .scanlines {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(
-                rgba(0, 0, 0, 0) 0%, 
-                rgba(0, 0, 0, 0.4) 50%,
-                rgba(0, 0, 0, 0) 100%
+                to bottom,
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.3) 50%
             );
-            background-size: 100% 4px;
-            z-index: 10;
+            background-size: 100% 3px;
+            z-index: 21;
             pointer-events: none;
         }
 
-        /* 2. 지글거리는 거친 노이즈 */
-        .static-noise {
+        /* 3. 화면 외곽 비네팅 (이미지처럼 모서리를 어둡게) */
+        .vignette {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0.12;
-            z-index: 9;
+            background: radial-gradient(
+                circle at center,
+                transparent 40%,
+                rgba(0, 0, 0, 0.9) 95%
+            );
+            z-index: 22;
             pointer-events: none;
-            background: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_hz_sine_multi_tone_noise.png');
-            animation: noise-anim 0.2s infinite steps(2);
-        }
-
-        @keyframes noise-anim {
-            0% { background-position: 0 0; }
-            100% { background-position: 50px 50px; }
         }
 
         canvas {
-            width: 110%; /* 왜곡 여백 보정 */
+            width: 110%; /* 왜곡 여백 커버 */
             height: 110%;
             image-rendering: pixelated;
-            filter: blur(0.5px) contrast(1.3) brightness(1.1) saturate(1.2);
-        }
-
-        /* 화면 밝기 변화 (Flicker) */
-        .flicker {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.02);
-            z-index: 11;
-            pointer-events: none;
-            animation: flicker-anim 0.1s infinite;
-        }
-
-        @keyframes flicker-anim {
-            0% { opacity: 0.1; }
-            50% { opacity: 0.2; }
-            100% { opacity: 0.1; }
+            filter: blur(0.5px) brightness(1.2) contrast(1.1);
         }
     </style>
 </head>
 <body>
 
-<div id="crt-shell">
-    <div id="monitor-screen">
+<div class="crt-container">
+    <div class="screen">
+        <div class="glitch-noise"></div>
         <div class="scanlines"></div>
-        <div class="static-noise"></div>
-        <div class="flicker"></div>
+        <div class="vignette"></div>
         <canvas id="gameCanvas"></canvas>
     </div>
 </div>
@@ -119,30 +117,30 @@ canvas.height = 480;
 let page = 0;
 const data = [
     {
-        title: "[ 캐릭터 정보 ]",
+        title: "캐릭터 정보",
         name: "제갈량", lv: "99",
         hp: 980, mp: 999,
         stats: [["무력", 55], ["지력", 100], ["통솔", 98], ["매력", 99]]
     },
     {
-        title: "[ 보유 기술 ]",
+        title: "보유 기술",
         name: "제갈량", lv: "99",
         hp: 980, mp: 999,
-        stats: [["코딩", 92], ["디자인", 95], ["기획", 85], ["배포", 88]]
+        stats: [["지식", 92], ["창의", 95], ["논리", 85], ["열정", 88]]
     }
 ];
 
 function draw() {
     const d = data[page];
     
-    // 심해와 같은 어두운 배경
-    ctx.fillStyle = "#050812";
+    // 심해색 배경
+    ctx.fillStyle = "#050810";
     ctx.fillRect(0, 0, 640, 480);
 
-    // 내부 노이즈 픽셀
-    for (let i = 0; i < 600; i++) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.04})`;
-        ctx.fillRect(Math.random() * 640, Math.random() * 480, 1, 1);
+    // [지지직 포인트 1] 매 프레임 무작위 가로줄 그리기 (전파 방해 느낌)
+    if (Math.random() > 0.9) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.fillRect(0, Math.random() * 480, 640, Math.random() * 5);
     }
 
     // RPG 박스
@@ -156,37 +154,35 @@ function draw() {
     ctx.fillText(d.title, 320, 110);
 
     ctx.textAlign = "left";
-    ctx.fillText(`이름: ${d.name}`, 100, 170);
-    ctx.fillText(`LV: ${d.lv}`, 440, 170);
+    ctx.fillText(`이름: ${d.name}`, 100, 175);
+    ctx.fillText(`LV: ${d.lv}`, 450, 175);
 
+    // 게이지
     const drawBar = (label, val, max, y, color) => {
-        ctx.font = "20px 'Nanum Gothic Coding'";
+        ctx.font = "22px 'Nanum Gothic Coding'";
         ctx.fillText(label, 100, y);
         ctx.fillStyle = "#111";
-        ctx.fillRect(160, y - 20, 380, 22);
+        ctx.fillRect(160, y - 22, 380, 26);
         ctx.fillStyle = color;
-        ctx.fillRect(160, y - 20, (val / max) * 380, 22);
+        ctx.fillRect(160, y - 22, (val / max) * 380, 26);
         ctx.strokeStyle = "white";
-        ctx.strokeRect(160, y - 20, 380, 22);
+        ctx.strokeRect(160, y - 22, 380, 26);
     };
-    drawBar("HP", d.hp, 1000, 230, "#b22222");
-    drawBar("MP", d.mp, 1000, 275, "#1e90ff");
+    drawBar("HP", d.hp, 1000, 240, "#c00");
+    drawBar("MP", d.mp, 1000, 290, "#06c");
 
+    // 상세 스탯
     d.stats.forEach((s, i) => {
         let x = (i % 2 === 0) ? 100 : 340;
-        let y = 345 + (Math.floor(i / 2) * 60);
+        let y = 355 + (Math.floor(i / 2) * 60);
         ctx.fillStyle = "white";
         ctx.font = "20px 'Nanum Gothic Coding'";
         ctx.fillText(`${s[0]}: ${s[1]}`, x, y);
-        ctx.fillStyle = "#333";
-        ctx.fillRect(x, y + 10, 200, 4);
-        ctx.fillStyle = "#32cd32";
-        ctx.fillRect(x, y + 10, s[1] * 2, 4);
     });
 
-    // 상하 떨림
-    const vScroll = Math.sin(Date.now() * 0.01) * 0.3;
-    canvas.style.transform = `translateY(${vScroll}px)`;
+    // [지지직 포인트 2] 화면 미세 진동 (Horizontal Shake)
+    const shakeX = (Math.random() - 0.5) * 1.5;
+    canvas.style.left = shakeX + "px";
 
     requestAnimationFrame(draw);
 }
