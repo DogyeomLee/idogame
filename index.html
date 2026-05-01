@@ -2,217 +2,165 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Retro Console Portfolio</title>
+    <title>Retro Game Portfolio</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&display=swap');
-        
-        body { 
-            background: #000; 
-            margin: 0; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            width: 100vw;
-            overflow: hidden;
-            font-family: 'Nanum Gothic Coding', monospace;
-        }
-
-        #wrapper { 
-            position: relative; 
-            width: 95vw; 
-            height: 95vh; 
-            max-width: 1100px;
-            max-height: 825px; /* 4:3 비율 유지 */
-        }
-
-        #shaderCanvas { width: 100%; height: 100%; display: block; }
-        #gameCanvas { display: none; }
-        
-        #interaction-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            cursor: pointer;
-        }
+        body { background: #000; margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        /* 화면을 꽉 채우되 4:3 비율 유지 */
+        #container { position: relative; width: 100vw; height: 75vw; max-width: 1066px; max-height: 800px; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
-<div id="wrapper">
-    <canvas id="shaderCanvas"></canvas>
-    <canvas id="gameCanvas"></canvas>
-    <div id="interaction-layer"></div>
+<div id="container">
+    <!-- 실제 화면에 보이는 WebGL 캔버스 -->
+    <canvas id="outCanvas"></canvas>
+    <!-- 내부 계산용 2D 캔버스 (숨김) -->
+    <canvas id="bufferCanvas" style="display:none;"></canvas>
 </div>
 
 <script>
-/** 1. 메뉴 데이터 및 상태 **/
-const menuItems = ["START PORTFOLIO", "PROJECT ARCHIVE", "TECH SPEC", "POWER OFF"];
-let currentView = "TITLE"; // TITLE, CONTENT
-let mousePos = { x: 0, y: 0 };
-let isPowerOff = false;
+const outCanvas = document.getElementById("outCanvas");
+const bufferCanvas = document.getElementById("bufferCanvas");
+const bCtx = bufferCanvas.getContext("2d");
+bufferCanvas.width = 800;
+bufferCanvas.height = 600;
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-canvas.width = 800; canvas.height = 600;
+let mouseX = 0, mouseY = 0;
+let menuItems = ["NEW GAME", "LOAD PROJECT", "TECH DATA", "SHUTDOWN"];
+let currentMode = "TITLE";
 
-/** 2. 마우스 인터랙션 **/
-const layer = document.getElementById("interaction-layer");
-layer.addEventListener('mousemove', (e) => {
-    const rect = layer.getBoundingClientRect();
-    mousePos.x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    mousePos.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+// 마우스 좌표 추적
+outCanvas.addEventListener('mousemove', (e) => {
+    const rect = outCanvas.getBoundingClientRect();
+    mouseX = (e.clientX - rect.left) * (800 / rect.width);
+    mouseY = (e.clientY - rect.top) * (600 / rect.height);
 });
 
-layer.addEventListener('click', () => {
-    if (isPowerOff) { isPowerOff = false; return; }
-    
-    if (currentView === "TITLE") {
-        menuItems.forEach((item, i) => {
-            const yPos = 350 + i * 55;
-            // 버튼 클릭 판정 (중앙 가로 300px 범위)
-            if (mousePos.x > 250 && mousePos.x < 550 && mousePos.y > yPos - 30 && mousePos.y < yPos + 15) {
-                if(i === 3) isPowerOff = true;
-                else alert(item + " 기능을 여기에 연결하세요!");
-            }
-        });
-    }
-});
-
-/** 3. 게임 내부 그래픽 (2D) **/
-function drawUI() {
-    // 배경 (약간의 푸른기가 도는 90년대 블랙)
-    ctx.fillStyle = isPowerOff ? "#000" : "#080810";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (isPowerOff) return;
-
-    // 상단 큼직한 게임 타이틀
-    ctx.textAlign = "center";
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = "#ff0055";
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 70px 'Nanum Gothic Coding'";
-    ctx.fillText("DEV_MISSION", canvas.width/2, 200);
-    ctx.shadowBlur = 0;
-
-    ctx.font = "16px 'Nanum Gothic Coding'";
-    ctx.fillStyle = "#444466";
-    ctx.fillText("© 2026 RETRO_DEV CORP. ALL RIGHTS RESERVED.", canvas.width/2, 240);
-
-    // 메뉴 버튼들
+// 클릭 시 페이지 전환
+outCanvas.addEventListener('click', () => {
     menuItems.forEach((item, i) => {
-        const yPos = 350 + i * 55;
-        const isHover = mousePos.x > 250 && mousePos.x < 550 && mousePos.y > yPos - 30 && mousePos.y < yPos + 15;
-
-        if (isHover) {
-            // 선택된 버튼 효과 (깜빡이는 화살표)
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 24px 'Nanum Gothic Coding'";
-            ctx.fillText("> " + item + " <", canvas.width/2, yPos);
-            
-            // 버튼 테두리 박스
-            ctx.strokeStyle = "#fff";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(250, yPos - 35, 300, 50);
-        } else {
-            // 일반 버튼
-            ctx.fillStyle = "#666";
-            ctx.font = "24px 'Nanum Gothic Coding'";
-            ctx.fillText(item, canvas.width/2, yPos);
+        const y = 350 + i * 60;
+        if (mouseX > 250 && mouseX < 550 && mouseY > y - 30 && mouseY < y + 20) {
+            if (i === 3) window.close(); // 실제로는 보안상 안될 수 있음
+            else currentMode = item;
         }
     });
+});
 
-    // 하단 팁
-    ctx.fillStyle = "#333";
-    ctx.font = "12px 'Nanum Gothic Coding'";
-    ctx.fillText("USE MOUSE TO SELECT AND CLICK", canvas.width/2, 570);
+function drawBuffer() {
+    // 배경
+    bCtx.fillStyle = "#0a0a12";
+    bCtx.fillRect(0, 0, 800, 600);
+
+    if (currentMode === "TITLE") {
+        // 타이틀
+        bCtx.textAlign = "center";
+        bCtx.fillStyle = "#fff";
+        bCtx.font = "bold 80px 'Nanum Gothic Coding'";
+        bCtx.fillText("RETRO_DEV", 400, 200);
+        
+        bCtx.font = "18px 'Nanum Gothic Coding'";
+        bCtx.fillStyle = "#ff0055";
+        bCtx.fillText("PUSH START BUTTON", 400, 280);
+
+        // 메뉴 버튼
+        menuItems.forEach((item, i) => {
+            const y = 350 + i * 60;
+            const isHover = mouseX > 250 && mouseX < 550 && mouseY > y - 30 && mouseY < y + 20;
+            
+            if (isHover) {
+                bCtx.fillStyle = "#fff";
+                bCtx.fillRect(250, y - 35, 300, 50);
+                bCtx.fillStyle = "#000";
+                bCtx.font = "bold 24px 'Nanum Gothic Coding'";
+                bCtx.fillText("> " + item, 400, y);
+            } else {
+                bCtx.strokeStyle = "#fff";
+                bCtx.lineWidth = 2;
+                bCtx.strokeRect(250, y - 35, 300, 50);
+                bCtx.fillStyle = "#fff";
+                bCtx.font = "24px 'Nanum Gothic Coding'";
+                bCtx.fillText(item, 400, y);
+            }
+        });
+    } else {
+        // 상세 페이지
+        bCtx.fillStyle = "#fff";
+        bCtx.font = "bold 40px 'Nanum Gothic Coding'";
+        bCtx.textAlign = "center";
+        bCtx.fillText(currentMode, 400, 300);
+        bCtx.font = "20px 'Nanum Gothic Coding'";
+        bCtx.fillText("CLICK ANYWHERE TO BACK", 400, 400);
+        outCanvas.onclick = () => { currentMode = "TITLE"; outCanvas.onclick = null; };
+    }
 }
 
-/** 4. 강력한 CRT 쉐이더 (WebGL) **/
-const sCanvas = document.getElementById("shaderCanvas");
-const gl = sCanvas.getContext("webgl");
+// --- WebGL 쉐이더 설정 ---
+const gl = outCanvas.getContext("webgl");
+const vShader = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(vShader, `attribute vec2 p;varying vec2 v;void main(){v=(p+1.)/2.;v.y=1.-v.y;gl_Position=vec4(p,0,1);}`);
+gl.compileShader(vShader);
 
-const vertexSource = `
-    attribute vec2 position;
-    varying vec2 vTexCoord;
-    void main() {
-        vTexCoord = (position + 1.0) / 2.0;
-        vTexCoord.y = 1.0 - vTexCoord.y;
-        gl_Position = vec4(position, 0.0, 1.0);
-    }
-`;
-
-const fragmentSource = `
+const fShader = gl.createShader(gl.FRAGMENT_SHADER);
+gl.shaderSource(fShader, `
     precision mediump float;
-    varying vec2 vTexCoord;
-    uniform sampler2D uTexture;
-    uniform float uTime;
-
-    // 브라운관 곡률 왜곡
-    vec2 curve(vec2 uv) {
-        uv = (uv - 0.5) * 2.0;
-        uv *= 1.1;	
-        uv.x *= 1.0 + pow((abs(uv.y) / 1.8), 2.0);
-        uv.y *= 1.0 + pow((abs(uv.x) / 1.2), 2.0);
-        return (uv / 2.0) + 0.5;
+    varying vec2 v;
+    uniform sampler2D t;
+    uniform float time;
+    vec2 curve(vec2 uv){
+        uv=(uv-0.5)*2.0;
+        uv.x*=1.0+pow(abs(uv.y)/2.0,2.0);
+        uv.y*=1.0+pow(abs(uv.x)/1.5,2.0);
+        return uv*0.5+0.5;
     }
-
-    void main() {
-        vec2 uv = curve(vTexCoord);
-        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return;
-        }
-
-        vec3 col;
-        // 색수차 (RGB 찢어짐)
-        col.r = texture2D(uTexture, uv + vec2(0.003, 0.0)).r;
-        col.g = texture2D(uTexture, uv).g;
-        col.b = texture2D(uTexture, uv - vec2(0.003, 0.0)).b;
-
-        // 주사선(Scanline)
-        float scanline = sin(uv.y * 600.0 + uTime * 10.0) * 0.1;
-        col -= scanline;
-
-        // 미세한 노이즈
-        float noise = (fract(sin(dot(uv * uTime, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.1;
-        col += noise;
-
-        // 비네팅
-        float vig = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
-        col *= pow(35.0 * vig, 0.45);
-
-        gl_FragColor = vec4(col, 1.0);
+    void main(){
+        vec2 u=curve(v);
+        if(u.x<0.||u.x>1.||u.y<0.||u.y>1.){gl_FragColor=vec4(0,0,0,1);return;}
+        vec3 c;
+        c.r=texture2D(t,u+vec2(0.002,0)).r;
+        c.g=texture2D(t,u).g;
+        c.b=texture2D(t,u-vec2(0.002,0)).b;
+        float s=sin(u.y*600.+time*10.)*0.1;
+        float n=(fract(sin(dot(u*time,vec2(12.9,78.2)))*437.5)-0.5)*0.1;
+        c-=s;c+=n;
+        gl_FragColor=vec4(c*pow(30.*u.x*u.y*(1.-u.x)*(1.-u.y),0.4),1);
     }
-`;
+`);
+gl.compileShader(fShader);
 
-// [WebGL 초기화 루틴]
-const program = gl.createProgram();
-function createShader(gl, type, source) {
-    const s = gl.createShader(type);
-    gl.shaderSource(s, source); gl.compileShader(s); return s;
-}
-gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vertexSource));
-gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fragmentSource));
-gl.linkProgram(program); gl.useProgram(program);
-const buffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
-const posLoc = gl.getAttribLocation(program, "position");
-gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-const texture = gl.createTexture();
-const uTimeLoc = gl.getUniformLocation(program, "uTime");
+const prog = gl.createProgram();
+gl.attachShader(prog, vShader); gl.attachShader(prog, fShader);
+gl.linkProgram(prog); gl.useProgram(prog);
 
-function render() {
-    sCanvas.width = sCanvas.clientWidth; sCanvas.height = sCanvas.clientHeight;
-    gl.viewport(0, 0, sCanvas.width, sCanvas.height);
-    drawUI();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), gl.STATIC_DRAW);
+const pLoc = gl.getAttribLocation(prog, "p");
+gl.enableVertexAttribArray(pLoc); gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+
+const tex = gl.createTexture();
+const tLoc = gl.getUniformLocation(prog, "time");
+
+function loop(t) {
+    outCanvas.width = outCanvas.clientWidth;
+    outCanvas.height = outCanvas.clientHeight;
+    gl.viewport(0, 0, outCanvas.width, outCanvas.height);
+
+    drawBuffer();
+
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bufferCanvas);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.uniform1f(uTimeLoc, performance.now() / 1000);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    
+    gl.uniform1f(tLoc, t/1000);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-    requestAnimationFrame(render);
+    requestAnimationFrame(loop);
 }
-render();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
