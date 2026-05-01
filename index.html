@@ -2,120 +2,27 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>Glass CRT Balance</title>
+<title>Pure CRT</title>
 
 <style>
 body{
     margin:0;
-    background:#0a0c12;
-    height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-}
-
-#wrap{
-    aspect-ratio:4/3;
-    width:92vw;
-    max-width:calc(92vh * 4/3);
-}
-
-#screen{
-    position:relative;
-    width:100%;
-    height:100%;
     background:#000;
-    border-radius:18px;
     overflow:hidden;
-    box-shadow:
-        0 40px 120px rgba(0,0,0,0.9),
-        inset 0 0 40px rgba(0,0,0,0.6);
 }
 
 canvas{
-    position:absolute;
-    width:100%;
-    height:100%;
-}
-
-/* 유리 */
-#glass{
-    position:absolute;
-    width:100%;
-    height:100%;
-    pointer-events:none;
-    border-radius:18px;
-
-    background:
-        linear-gradient(120deg,
-            rgba(255,255,255,0.12),
-            rgba(255,255,255,0.03) 30%,
-            transparent 60%
-        );
-}
-
-/* 하이라이트 */
-#highlight{
-    position:absolute;
-    width:120%;
-    height:120%;
-    top:-10%;
-    left:-10%;
-    pointer-events:none;
-
-    background:
-        radial-gradient(circle at 30% 20%,
-            rgba(255,255,255,0.2),
-            rgba(255,255,255,0.04) 30%,
-            transparent 60%);
-}
-
-/* 프레넬 */
-#fresnel{
-    position:absolute;
-    width:100%;
-    height:100%;
-    pointer-events:none;
-
-    background:
-        radial-gradient(circle,
-            transparent 45%,
-            rgba(255,255,255,0.05) 75%,
-            rgba(255,255,255,0.1) 100%);
-
-    mix-blend-mode:screen;
-}
-
-/* 가장자리 */
-#edge{
-    position:absolute;
-    width:100%;
-    height:100%;
-    pointer-events:none;
-    border-radius:18px;
-
-    box-shadow:
-        inset 0 0 60px rgba(0,0,0,0.7),
-        inset 0 0 120px rgba(0,0,0,0.4);
+    width:100vw;
+    height:100vh;
+    display:block;
 }
 </style>
 </head>
 
 <body>
 
-<div id="wrap">
-<div id="screen">
-
 <canvas id="out"></canvas>
 <canvas id="buf" style="display:none;"></canvas>
-
-<div id="glass"></div>
-<div id="highlight"></div>
-<div id="fresnel"></div>
-<div id="edge"></div>
-
-</div>
-</div>
 
 <script>
 const W=800,H=600;
@@ -130,17 +37,16 @@ const ctx=buf.getContext("2d");
 
 /* UI */
 function draw(){
-    ctx.fillStyle="#0d111a";
+    ctx.fillStyle="#0a0a12";
     ctx.fillRect(0,0,W,H);
 
     ctx.fillStyle="#fff";
     ctx.textAlign="center";
-    ctx.font="bold 70px sans-serif";
-    ctx.fillText("CRT PANEL",400,260);
+    ctx.font="bold 80px monospace";
+    ctx.fillText("CRT",400,260);
 
-    ctx.font="18px sans-serif";
-    ctx.fillStyle="#aaa";
-    ctx.fillText("Glass + CRT Balance",400,320);
+    ctx.font="20px monospace";
+    ctx.fillText("REAL EFFECT ACTIVE",400,330);
 }
 
 /* WebGL */
@@ -164,48 +70,57 @@ gl.shaderSource(fs,`
 precision mediump float;
 varying vec2 v;
 uniform sampler2D t;
+uniform float time;
 
-/* 약하지만 존재하는 곡면 */
+/* 강한 CRT 곡면 */
 vec2 distort(vec2 uv){
-    uv = uv * 2.0 - 1.0;
+    uv = uv*2.0-1.0;
     float d = dot(uv,uv);
-    uv *= 1.0 + d * 0.1;
-    return uv * 0.5 + 0.5;
+    uv *= 1.0 + d * 0.25;
+    return uv*0.5+0.5;
+}
+
+float rand(vec2 c){
+return fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453);
 }
 
 void main(){
 
 vec2 u = distort(v);
 
+/* 바깥 검정 */
 if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0){
     gl_FragColor=vec4(0,0,0,1);
     return;
 }
 
-/* 🔴 아주 약한 RGB 분리 */
-float r = texture2D(t, u + vec2(0.0012,0)).r;
+/* 🔴 RGB 분리 강하게 */
+float r = texture2D(t, u + vec2(0.003,0)).r;
 float g = texture2D(t, u).g;
-float b = texture2D(t, u - vec2(0.0012,0)).b;
+float b = texture2D(t, u - vec2(0.003,0)).b;
 
 vec3 col = vec3(r,g,b);
 
-/* 💡 은은한 Bloom */
+/* 💡 Bloom */
 vec3 bloom =
-    texture2D(t,u+vec2(0.0015,0)).rgb +
-    texture2D(t,u-vec2(0.0015,0)).rgb +
-    texture2D(t,u+vec2(0,0.0015)).rgb +
-    texture2D(t,u-vec2(0,0.0015)).rgb;
+    texture2D(t,u+vec2(0.003,0)).rgb +
+    texture2D(t,u-vec2(0.003,0)).rgb +
+    texture2D(t,u+vec2(0,0.003)).rgb +
+    texture2D(t,u-vec2(0,0.003)).rgb;
 
 bloom *= 0.25;
 
 float bright = max(max(col.r,col.g),col.b);
-col += bloom * bright * 0.25;
+col += bloom * bright * 0.5;
 
-/* 📺 스캔라인 (조금 더 보이게) */
-col -= sin(u.y*600.0) * 0.05;
+/* 📺 스캔라인 확실하게 */
+col -= sin(u.y*900.0) * 0.15;
 
-/* 비네팅 */
-col *= 1.0 - length(v-0.5)*0.6;
+/* 📡 노이즈 살짝 */
+col += rand(u+time)*0.04;
+
+/* 🔥 비네팅 */
+col *= 1.0 - length(v-0.5)*1.2;
 
 gl_FragColor=vec4(col,1.0);
 }`);
@@ -237,14 +152,18 @@ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 
+const timeLoc=gl.getUniformLocation(prog,"time");
+
 /* loop */
-function loop(){
+function loop(t){
 
 draw();
 
 gl.viewport(0,0,W,H);
 
 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,buf);
+
+gl.uniform1f(timeLoc,t*0.001);
 
 gl.drawArrays(gl.TRIANGLES,0,6);
 
