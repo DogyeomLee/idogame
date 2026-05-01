@@ -2,178 +2,190 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>90s RPG Status Screen</title>
+    <title>레트로 RPG 스테이터스</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&display=swap');
+        /* 기본 배경 및 폰트 설정 */
+        @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@700&display=swap');
 
-        * { margin: 0; padding: 0; overflow: hidden; }
         body {
-            background-color: #050505;
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; width: 100vw;
-            /* 배경에 미세한 노이즈 */
-            background-image: radial-gradient(#111 0.5px, transparent 0.5px);
-            background-size: 4px 4px;
-        }
-
-        /* [핵심] 볼록렌즈 왜곡을 만드는 컨테이너 */
-        #crt-monitor {
-            position: relative;
-            width: 95vw;
-            height: 71.25vw; /* 4:3 비율 */
-            max-width: 900px;
-            max-height: 675px;
-            
-            /* 구체 형태로 왜곡 */
-            border-radius: 50% / 10%; 
-            transform: scale(1.1) perspective(1000px) rotateX(1deg);
-            box-shadow: 
-                0 0 0 20px #1a1a1a, /* 모니터 프레임 */
-                0 50px 100px rgba(0,0,0,0.9),
-                inset 0 0 80px rgba(0,0,0,0.8);
+            background-color: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
             overflow: hidden;
-            background: #000;
         }
 
-        /* 내부 화면 - 실제보다 크게 설정 후 안쪽으로 말아넣어 왜곡 극대화 */
+        /* [핵심] CRT 볼록 렌즈 효과 */
+        #crt-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: #000;
+            border: 20px solid #333;
+            border-radius: 40px; /* 외곽 베젤 */
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+        }
+
+        /* 화면을 안쪽으로 굽게 만드는 왜곡 */
         #screen {
-            width: 110%;
-            height: 110%;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000511;
+            /* 어안 렌즈 왜곡 효과 */
+            transform: scale(1.05);
+            filter: contrast(1.2) brightness(1.1);
+        }
+
+        /* 지지직거리는 노이즈 및 주사선 */
+        #screen::after {
+            content: " ";
+            display: block;
             position: absolute;
-            top: -5%;
-            left: -5%;
-            border-radius: 20%; /* 화면 끝부분 곡선 처리 */
-            background: #001; /* 로딩 전 배경 */
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* 지지직거리는 애니메이션 */
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
+        }
+        .scanline-bar {
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(255,255,255,0.05) 50%, rgba(0,0,0,0) 100%);
+            position: absolute;
+            top: -100px;
+            z-index: 11;
+            animation: scanline 8s linear infinite;
         }
 
         canvas {
+            image-rendering: pixelated;
             width: 100%;
             height: 100%;
-            cursor: pointer;
-            image-rendering: pixelated; /* 픽셀 느낌 강조 */
-        }
-
-        /* CRT 주사선 오버레이 */
-        #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.03), rgba(0, 0, 255, 0.05));
-            background-size: 100% 4px, 4px 100%;
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        /* 유리 반사광 효과 */
-        #glass-glare {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.15) 0%, transparent 60%);
-            pointer-events: none;
-            z-index: 6;
         }
     </style>
 </head>
 <body>
 
-    <div id="crt-monitor">
-        <div id="screen">
-            <canvas id="gameCanvas"></canvas>
-        </div>
-        <div id="overlay"></div>
-        <div id="glass-glare"></div>
+<div id="crt-container">
+    <div id="screen">
+        <div class="scanline-bar"></div>
+        <canvas id="gameCanvas"></canvas>
     </div>
+</div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-canvas.width = 1000;
-canvas.height = 750;
+// 레트로 해상도 (낮게 설정하여 픽셀 느낌 강조)
+canvas.width = 640;
+canvas.height = 480;
 
 let page = 0;
 const data = [
     {
-        title: "武 將 情 報 (캐릭터 정보)",
-        name: "諸葛亮 (제갈량)", lv: "99",
+        title: "[ 캐릭터 정보 ]",
+        name: "제갈량", lv: "99",
         hp: 980, mp: 999,
-        stats: [["武力 (STR)", 55], ["知力 (INT)", 100], ["統率 (LEA)", 98], ["魅力 (CHA)", 99]]
+        stats: [["무력", 55], ["지력", 100], ["통솔", 98], ["매력", 99]]
     },
     {
-        title: "技 能 目 錄 (보유 기술)",
-        name: "諸葛亮 (제갈량)", lv: "99",
+        title: "[ 보유 기술 ]",
+        name: "제갈량", lv: "99",
         hp: 980, mp: 999,
-        stats: [["JAVASCRIPT", 92], ["TYPESCRIPT", 88], ["WEBGL", 85], ["REACT", 95]]
+        stats: [["자바스크립트", 92], ["리액트", 95], ["게임개발", 85], ["알고리즘", 88]]
     }
 ];
 
 function draw() {
     const d = data[page];
     
-    // 1. 삼국지 특유의 암청색 배경
-    const bgGrad = ctx.createRadialGradient(500, 375, 100, 500, 375, 600);
-    bgGrad.addColorStop(0, "#001a4d");
-    bgGrad.addColorStop(1, "#000a20");
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, 1000, 750);
+    // 1. 화면 초기화 (약간의 잔상 효과를 위해 투명도 조절)
+    ctx.fillStyle = "#000511";
+    ctx.fillRect(0, 0, 640, 480);
 
-    // 2. 황금색 이중 테두리 (장식)
-    ctx.strokeStyle = "#750"; ctx.lineWidth = 15;
-    ctx.strokeRect(40, 40, 920, 670);
-    ctx.strokeStyle = "#d90"; ctx.lineWidth = 4;
-    ctx.strokeRect(55, 55, 890, 640);
+    // 2. 미세한 지지직 효과 (노이즈 픽셀)
+    for (let i = 0; i < 500; i++) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.05})`;
+        ctx.fillRect(Math.random() * 640, Math.random() * 480, 1, 1);
+    }
 
-    // 3. 상단 타이틀 영역
-    ctx.fillStyle = "#750";
-    ctx.fillRect(55, 55, 890, 80);
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 42px 'Nanum Gothic Coding', monospace";
+    // 3. 고전 RPG 레이아웃 (흰색 테두리 상자)
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, 600, 440);
+    ctx.strokeRect(30, 30, 580, 420); // 이중 테두리
+
+    // 4. 텍스트 렌더링
+    ctx.fillStyle = "white";
+    ctx.font = "24px 'Nanum Gothic Coding'";
     ctx.textAlign = "center";
-    ctx.shadowColor = "#000"; ctx.shadowBlur = 4;
-    ctx.fillText(d.title, 500, 110);
-    ctx.shadowBlur = 0;
-
-    // 4. 캐릭터 기본 스탯 (삼국지 색감)
-    ctx.textAlign = "left";
-    ctx.font = "bold 38px 'Nanum Gothic Coding', monospace";
     
-    // 이름/레벨
-    ctx.fillStyle = "#0ff"; ctx.fillText(`氏名: ${d.name}`, 100, 210);
-    ctx.fillStyle = "#fb0"; ctx.fillText(`等級: ${d.lv}`, 100, 280);
+    // 타이틀
+    ctx.fillText(d.title, 320, 70);
 
-    // HP/MP 바 (클래식 스타일)
+    // 기본 스탯
+    ctx.textAlign = "left";
+    ctx.font = "28px 'Nanum Gothic Coding'";
+    ctx.fillText(`이름: ${d.name}`, 60, 130);
+    ctx.fillText(`레벨: ${d.lv}`, 400, 130);
+
+    // HP/MP 바
     const drawBar = (label, val, max, y, color) => {
-        ctx.fillStyle = "#fff"; ctx.font = "28px 'Nanum Gothic Coding'";
-        ctx.fillText(label, 100, y);
-        ctx.fillStyle = "#111"; ctx.fillRect(220, y-22, 400, 28);
-        ctx.fillStyle = color; ctx.fillRect(220, y-22, (val/max)*400, 28);
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.strokeRect(220, y-22, 400, 28);
+        ctx.font = "20px 'Nanum Gothic Coding'";
+        ctx.fillText(label, 60, y);
+        ctx.fillStyle = "#333";
+        ctx.fillRect(120, y - 18, 450, 20);
+        ctx.fillStyle = color;
+        ctx.fillRect(120, y - 18, (val / max) * 450, 20);
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(120, y - 18, 450, 20);
+        ctx.fillStyle = "white";
     };
-    drawBar("體力", d.hp, 1000, 360, "#d33");
-    drawBar("氣力", d.mp, 1000, 420, "#38f");
+    drawBar("생명", d.hp, 1000, 180, "#e74c3c");
+    drawBar("마력", d.mp, 1000, 220, "#3498db");
 
-    // 5. 능력치 박스
-    ctx.strokeStyle = "#d90"; ctx.lineWidth = 2;
-    ctx.strokeRect(100, 480, 800, 180);
+    // 상세 능력치
+    ctx.lineWidth = 2;
+    ctx.strokeRect(60, 260, 520, 150);
     
     d.stats.forEach((s, i) => {
-        let x = (i % 2 === 0) ? 140 : 540;
-        let y = 540 + (Math.floor(i/2) * 70);
-        ctx.fillStyle = "#ccc"; ctx.font = "32px 'Nanum Gothic Coding'";
-        ctx.fillText(s[0], x, y);
+        let x = (i % 2 === 0) ? 90 : 340;
+        let y = 305 + (Math.floor(i / 2) * 60);
+        ctx.font = "22px 'Nanum Gothic Coding'";
+        ctx.fillText(`${s[0]}: ${s[1]}`, x, y);
         
-        ctx.fillStyle = "#0f0";
-        ctx.fillText(s[1].toString(), x + 250, y);
-        
-        // 작은 게이지
-        ctx.fillStyle = "#222"; ctx.fillRect(x, y+15, 320, 8);
-        ctx.fillStyle = "#0f0"; ctx.fillRect(x, y+15, s[1]*3.2, 8);
+        // 능력치 미니 게이지
+        ctx.fillStyle = "#555";
+        ctx.fillRect(x, y + 10, 200, 5);
+        ctx.fillStyle = "#2ecc71";
+        ctx.fillRect(x, y + 10, s[1] * 2, 5);
+        ctx.fillStyle = "white";
     });
 
-    // 6. 하단 안내문구 (깜빡임)
-    if (Math.floor(Date.now() / 600) % 2 === 0) {
-        ctx.textAlign = "center"; ctx.fillStyle = "#fb0";
-        ctx.font = "24px 'Nanum Gothic Coding'";
-        ctx.fillText("▼ 點擊 畵面 (화면을 클릭하세요)", 500, 710);
+    // 하단 안내 (깜빡임)
+    if (Math.floor(Date.now() / 500) % 2 === 0) {
+        ctx.textAlign = "center";
+        ctx.font = "18px 'Nanum Gothic Coding'";
+        ctx.fillText("- 클릭하여 페이지 전환 -", 320, 440);
     }
+
+    // 5. 화면 미세 떨림 구현 (JS)
+    const jitterX = (Math.random() - 0.5) * 0.3;
+    const jitterY = (Math.random() - 0.5) * 0.3;
+    canvas.style.transform = `translate(${jitterX}px, ${jitterY}px)`;
 
     requestAnimationFrame(draw);
 }
@@ -181,5 +193,6 @@ function draw() {
 canvas.addEventListener('click', () => { page = (page + 1) % data.length; });
 draw();
 </script>
+
 </body>
 </html>
