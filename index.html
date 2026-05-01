@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>CRT + Bloom + Chromatic Bleed</title>
+<title>CRT + VHS</title>
 
 <style>
 body{
@@ -78,7 +78,7 @@ function draw(){
     ctx.fillStyle="#fff";
     ctx.textAlign="center";
     ctx.font="bold 60px monospace";
-    ctx.fillText("CRT READY",400,260);
+    ctx.fillText("CRT VHS READY",400,260);
 
     ctx.font="16px monospace";
     ctx.fillText("C : CRT / P : POWER",400,330);
@@ -131,18 +131,31 @@ if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0){
     return;
 }
 
+/* ===== 📼 VHS 글리치 ===== */
+
+// 랜덤 라인 선택
+float line = step(0.95, rand(vec2(time * 0.5, floor(v.y * 200.0))));
+
+// 강도
+float shift = line * (rand(vec2(time, v.y)) - 0.5) * 0.08;
+
+// 적용
+u.x += shift;
+
+/* 약한 흔들림 */
+u.x += sin(v.y * 40.0 + time * 5.0) * 0.002;
+
+/* ======================== */
+
 /* ===== 🔴 Chromatic Bleed ===== */
-// Red (많이 퍼짐)
 float r =
     texture2D(t, u + vec2(0.003, 0.0)).r * 0.6 +
     texture2D(t, u + vec2(0.006, 0.0)).r * 0.4;
 
-// Green (중간)
 float g =
     texture2D(t, u).g * 0.7 +
     texture2D(t, u + vec2(0.002, 0.0)).g * 0.3;
 
-// Blue (적게 퍼짐)
 float b =
     texture2D(t, u - vec2(0.002, 0.0)).b * 0.85 +
     texture2D(t, u - vec2(0.004, 0.0)).b * 0.15;
