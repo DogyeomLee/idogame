@@ -2,22 +2,34 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>CRT + 3D BG FINAL</title>
+<title>CRT + SIDE 3D BG</title>
 
 <style>
 body{
     margin:0;
+    overflow:hidden;
     background:#000;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
 }
 
-/* 4:3 고정 */
+/* 🌌 전체 배경 캔버스 */
+#bg{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+}
+
+/* CRT 중앙 */
 #wrap{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
     aspect-ratio:4/3;
-    height:95vh;
+    height:85vh;
+    z-index:2;
 }
 
 #screen{
@@ -32,10 +44,7 @@ canvas{
     height:100%;
 }
 
-/* 버퍼 숨김 */
-#buf{
-    display:none;
-}
+#buf{ display:none; }
 
 /* 유리 */
 #glass{
@@ -49,17 +58,76 @@ canvas{
 
 <body>
 
+<!-- 🌌 배경 -->
+<canvas id="bg"></canvas>
+
+<!-- 📺 CRT -->
 <div id="wrap">
 <div id="screen">
-
 <canvas id="gl"></canvas>
 <canvas id="buf"></canvas>
 <div id="glass"></div>
-
 </div>
 </div>
 
 <script>
+/* =========================
+   🌌 배경 (진짜 3D 느낌)
+========================= */
+const bg=document.getElementById("bg");
+const bgCtx=bg.getContext("2d");
+
+function resizeBG(){
+    bg.width=window.innerWidth;
+    bg.height=window.innerHeight;
+}
+resizeBG();
+window.addEventListener("resize",resizeBG);
+
+let mx=0,my=0;
+
+window.addEventListener("mousemove",(e)=>{
+    mx=e.clientX;
+    my=e.clientY;
+});
+
+/* 별 생성 */
+let stars=[];
+for(let i=0;i<200;i++){
+    stars.push({
+        x:Math.random()*window.innerWidth,
+        y:Math.random()*window.innerHeight,
+        z:Math.random()*3+0.5
+    });
+}
+
+function drawBG(){
+
+    bgCtx.fillStyle="#02030a";
+    bgCtx.fillRect(0,0,bg.width,bg.height);
+
+    stars.forEach(s=>{
+
+        s.y += s.z*0.5;
+        if(s.y > bg.height){
+            s.y = 0;
+            s.x = Math.random()*bg.width;
+        }
+
+        /* 패럴랙스 */
+        let px = s.x + (mx - bg.width/2)*0.03*s.z;
+        let py = s.y + (my - bg.height/2)*0.03*s.z;
+
+        let size = s.z * 2;
+
+        bgCtx.fillStyle = `rgba(255,255,255,${0.4 + s.z*0.2})`;
+        bgCtx.fillRect(px,py,size,size);
+    });
+}
+
+/* =========================
+   📺 CRT (기존 유지)
+========================= */
 const W=800,H=600;
 
 const glCanvas=document.getElementById("gl");
@@ -69,84 +137,42 @@ const ctx=bufCanvas.getContext("2d");
 glCanvas.width=W; glCanvas.height=H;
 bufCanvas.width=W; bufCanvas.height=H;
 
-let mx=400,my=300;
-
-/* 🪟 유리 */
+/* 유리 */
 const glass=document.getElementById("glass");
 
 glCanvas.addEventListener("mousemove",(e)=>{
     const r=glCanvas.getBoundingClientRect();
-    mx=(e.clientX-r.left)*(W/r.width);
-    my=(e.clientY-r.top)*(H/r.height);
+    let gx=(e.clientX-r.left)/r.width*100;
+    let gy=(e.clientY-r.top)/r.height*100;
 
     glass.style.background =
-    `radial-gradient(circle at ${mx/W*100}% ${my/H*100}%,
+    `radial-gradient(circle at ${gx}% ${gy}%,
     rgba(255,255,255,0.25),
     rgba(255,255,255,0.05) 30%,
     transparent 60%)`;
 });
 
-/* 🌌 3D 배경 */
-let stars=[];
-for(let i=0;i<140;i++){
-    stars.push({
-        x:Math.random()*W,
-        y:Math.random()*H,
-        z:Math.random()*3 + 0.5
-    });
-}
-
-/* ===== UI + 배경 ===== */
-function draw(){
-
-    /* 배경 */
+/* UI */
+function drawCRT(){
     ctx.fillStyle="#05060a";
     ctx.fillRect(0,0,W,H);
 
-    /* 🌌 3D 패럴랙스 별 */
-    stars.forEach(s=>{
-
-        s.y += s.z * 0.6;
-        if(s.y > H){
-            s.y = 0;
-            s.x = Math.random()*W;
-        }
-
-        let px = s.x + (mx-W/2)*0.04*s.z;
-        let py = s.y + (my-H/2)*0.04*s.z;
-
-        let size = s.z * 1.5;
-
-        ctx.fillStyle = `rgba(255,255,255,${0.5 + s.z*0.2})`;
-        ctx.fillRect(px, py, size, size);
-    });
-
-    /* 타이틀 */
     ctx.fillStyle="#fff";
     ctx.textAlign="center";
     ctx.font="bold 70px monospace";
-    ctx.fillText("CRT 3D",400,260);
-
-    ctx.font="18px monospace";
-    ctx.fillText("BACKGROUND PARALLAX",400,320);
+    ctx.fillText("CRT SCREEN",400,260);
 }
 
-/* ===== WebGL ===== */
+/* WebGL */
 const gl=glCanvas.getContext("webgl");
 
-/* shader compile */
 function compile(type,src){
     const s=gl.createShader(type);
     gl.shaderSource(s,src);
     gl.compileShader(s);
-    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
-        console.error(gl.getShaderInfoLog(s));
-        return null;
-    }
     return s;
 }
 
-/* vertex */
 const vs=compile(gl.VERTEX_SHADER,`
 attribute vec2 p;
 varying vec2 v;
@@ -156,23 +182,21 @@ v.y=1.-v.y;
 gl_Position=vec4(p,0,1);
 }`);
 
-/* fragment */
 const fs=compile(gl.FRAGMENT_SHADER,`
 precision mediump float;
 varying vec2 v;
 uniform sampler2D t;
 uniform float time;
 
-/* CRT 왜곡 (완만) */
 vec2 crt(vec2 uv){
-    uv = uv*2.0-1.0;
-    uv.x *= 1.0 + uv.y*uv.y*0.12;
-    uv.y *= 1.0 + uv.x*uv.x*0.06;
+    uv=uv*2.0-1.0;
+    uv.x*=1.0+uv.y*uv.y*0.12;
+    uv.y*=1.0+uv.x*uv.x*0.06;
     return uv*0.5+0.5;
 }
 
 float noise(vec2 p){
-    return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);
+return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);
 }
 
 void main(){
@@ -184,42 +208,24 @@ if(u.x<0.0||u.x>1.0||u.y<0.0||u.y>1.0){
     return;
 }
 
-/* RGB 분리 */
 float r=texture2D(t,u+vec2(0.002,0)).r;
 float g=texture2D(t,u).g;
 float b=texture2D(t,u-vec2(0.002,0)).b;
 
 vec3 col=vec3(r,g,b);
 
-/* bloom */
-vec3 bloom =
-texture2D(t,u+vec2(0.002,0)).rgb +
-texture2D(t,u-vec2(0.002,0)).rgb +
-texture2D(t,u+vec2(0,0.002)).rgb +
-texture2D(t,u-vec2(0,0.002)).rgb;
-
-col += bloom*0.35;
-
-/* scanline */
 col -= sin(u.y*800.0)*0.12;
-
-/* noise */
 col += noise(u+time)*0.02;
-
-/* vignette */
-col *= 1.0 - length(v-0.5)*1.1;
 
 gl_FragColor=vec4(col,1.0);
 }`);
 
-/* program */
 const prog=gl.createProgram();
 gl.attachShader(prog,vs);
 gl.attachShader(prog,fs);
 gl.linkProgram(prog);
 gl.useProgram(prog);
 
-/* quad */
 const buffer=gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
 gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([
@@ -231,30 +237,24 @@ const loc=gl.getAttribLocation(prog,"p");
 gl.enableVertexAttribArray(loc);
 gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
 
-/* texture */
 const tex=gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D,tex);
 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 
 const timeLoc=gl.getUniformLocation(prog,"time");
 
-/* loop */
+/* =========================
+   LOOP
+========================= */
 function loop(t){
 
-draw();
-
-gl.clearColor(0,0,0,1);
-gl.clear(gl.COLOR_BUFFER_BIT);
+drawBG();     // 🌌 배경 먼저
+drawCRT();    // 📺 CRT 내용
 
 gl.viewport(0,0,W,H);
-
 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bufCanvas);
 
 gl.uniform1f(timeLoc,t*0.001);
-
 gl.drawArrays(gl.TRIANGLES,0,6);
 
 requestAnimationFrame(loop);
